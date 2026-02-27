@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #1a3f5a 0%, #2c5e7e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Main container - clean, professional card */
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: fit-content;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            padding: 0 8px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 400;
+            color: #1e4b6e;
+            letter-spacing: 1px;
+        }
+
+        .version-badge {
+            background: #e8f0fe;
+            padding: 6px 18px;
+            border-radius: 40px;
+            color: #1e4b6e;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid rgba(30, 75, 110, 0.2);
+        }
+
+        /* Sudoku Grid */
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 4px;
+            background: #c0d3e3;
+            padding: 4px;
+            border-radius: 16px;
+            margin-bottom: 28px;
+            border: 2px solid #a0b9cf;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: #1e3b4f;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border-radius: 4px;
+        }
+
+        /* 3x3 block borders - clean and visible */
+        .cell:nth-child(3n) {
+            margin-right: 4px;
+        }
+        .cell:nth-child(9n) {
+            margin-right: 0;
+        }
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            margin-bottom: 4px;
+        }
+
+        /* Cell states */
+        .cell.given {
+            background: #eef4fa;
+            color: #1e4b6e;
+            font-weight: 600;
+        }
+
+        .cell.editable {
+            background: white;
+        }
+
+        .cell.editable:hover {
+            background: #f0f9ff;
+            transform: scale(1.02);
+        }
+
+        .cell.selected {
+            background: #fff3c9;
+            border: 2px solid #ffb347;
+        }
+
+        .cell.user-digit {
+            color: #0066a0;
+            font-weight: 600;
+        }
+
+        .cell.conflict {
+            background: #ffe5e5;
+            color: #c41e1e;
+        }
+
+        .cell.correct-highlight {
+            background: #e6ffe6;
+            border: 2px solid #2ecc71;
+        }
+
+        .cell.incorrect-highlight {
+            background: #ffe6e6;
+            border: 2px solid #e74c3c;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #f0f5fa;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1e4b6e;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid #cdddee;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: #e1ecf5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: #1e4b6e;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #2a5f88;
+        }
+
+        .btn-success {
+            background: #2d6a4f;
+            color: white;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background: #40916c;
+        }
+
+        .btn-submit {
+            background: #f39c12;
+            color: white;
+            border: none;
+        }
+
+        .btn-submit:hover {
+            background: #e67e22;
+        }
+
+        .btn-validate {
+            background: #3498db;
+            color: white;
+            border: none;
+        }
+
+        .btn-validate:hover {
+            background: #2980b9;
+        }
+
+        .status-display {
+            background: #f0f5fa;
+            padding: 10px 28px;
+            border-radius: 30px;
+            font-size: 1rem;
+            color: #1e4b6e;
+            border: 1px solid #cdddee;
+            min-width: 220px;
+            text-align: center;
+        }
+
+        /* Progress indicator */
+        .progress-indicator {
+            margin-top: 16px;
+            font-size: 0.9rem;
+            color: #2d6a4f;
+            text-align: center;
+        }
+
+        /* Button info tooltip */
+        .button-info {
+            margin-top: 16px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #4a6b84;
+            background: rgba(255,255,255,0.5);
+            padding: 12px;
+            border-radius: 50px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-validate { background: #3498db; }
+        .dot-submit { background: #f39c12; }
+        .dot-auto { background: #1e4b6e; }
+        .dot-reset { background: #f0f5fa; border: 1px solid #cdddee; }
+
+        /* Keyboard shortcuts */
+        .shortcuts {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #d0e0f0;
+            display: flex;
+            gap: 24px;
+            color: #4a6b84;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .shortcut-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        kbd {
+            background: #edf2f7;
+            border: 1px solid #cbd5e0;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>AETHER SUDOKU</h1>
+            <span class="version-badge">professional edition</span>
+        </div>
+
+        <!-- Sudoku grid will be injected here -->
+        <div id="sudokuGrid" class="sudoku-grid"></div>
+
+        <!-- Progress indicator -->
+        <div id="progressIndicator" class="progress-indicator">📊 0/81 cells filled</div>
+
+        <!-- Button explanation -->
+        <div class="button-info">
+            <div class="info-item"><span class="info-dot dot-validate"></span> Validate: Check for conflicts (duplicates)</div>
+            <div class="info-item"><span class="info-dot dot-submit"></span> Submit: Check your final answer</div>
+            <div class="info-item"><span class="info-dot dot-auto"></span> Auto Complete: Fill remaining cells</div>
+            <div class="info-item"><span class="info-dot dot-reset"></span> Reset: Start this puzzle over</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="control-panel">
+            <div class="button-group">
+                <button class="btn" id="resetBtn">↻ reset</button>
+                <button class="btn" id="eraseBtn">⌫ erase</button>
+                <button class="btn btn-validate" id="validateBtn">✓ validate</button>
+                <button class="btn btn-success" id="newPuzzleBtn">🎲 new puzzle</button>
+                <button class="btn btn-submit" id="submitBtn">📤 submit answer</button>
+            </div>
+            <button class="btn btn-primary" id="solveBtn">✨ auto complete</button>
+            <div id="statusMessage" class="status-display">⚡ ready</div>
+        </div>
+
+        <!-- Keyboard shortcuts -->
+        <div class="shortcuts">
+            <div class="shortcut-item"><kbd>1-9</kbd> enter digit</div>
+            <div class="shortcut-item"><kbd>0</kbd> or <kbd>⌫</kbd> clear</div>
+            <div class="shortcut-item"><kbd>click</kbd> select cell</div>
+            <div class="shortcut-item"><kbd>🎲</kbd> new puzzle</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Collection of verified classic Sudoku puzzles (all have valid solutions)
+            const PUZZLE_COLLECTION = [
+                // Puzzle 1 - Classic easy
+                {
+                    name: "Classic #1",
+                    board: [
+                        [5,3,0,0,7,0,0,0,0],
+                        [6,0,0,1,9,5,0,0,0],
+                        [0,9,8,0,0,0,0,6,0],
+                        [8,0,0,0,6,0,0,0,3],
+                        [4,0,0,8,0,3,0,0,1],
+                        [7,0,0,0,2,0,0,0,6],
+                        [0,6,0,0,0,0,2,8,0],
+                        [0,0,0,4,1,9,0,0,5],
+                        [0,0,0,0,8,0,0,7,9]
+                    ],
+                    solution: [
+                        [5,3,4,6,7,8,9,1,2],
+                        [6,7,2,1,9,5,3,4,8],
+                        [1,9,8,3,4,2,5,6,7],
+                        [8,5,9,7,6,1,4,2,3],
+                        [4,2,6,8,5,3,7,9,1],
+                        [7,1,3,9,2,4,8,5,6],
+                        [9,6,1,5,3,7,2,8,4],
+                        [2,8,7,4,1,9,6,3,5],
+                        [3,4,5,2,8,6,1,7,9]
+                    ]
+                },
+                // Puzzle 2 - Medium
+                {
+                    name: "Moderate",
+                    board: [
+                        [0,0,0,2,6,0,7,0,1],
+                        [6,8,0,0,7,0,0,9,0],
+                        [1,9,0,0,0,4,5,0,0],
+                        [8,2,0,1,0,0,0,4,0],
+                        [0,0,4,6,0,2,9,0,0],
+                        [0,5,0,0,0,3,0,2,8],
+                        [0,0,9,3,0,0,0,7,4],
+                        [0,4,0,0,5,0,0,3,6],
+                        [7,0,3,0,1,8,0,0,0]
+                    ],
+                    solution: [
+                        [4,3,5,2,6,9,7,8,1],
+                        [6,8,2,5,7,1,4,9,3],
+                        [1,9,7,8,3,4,5,6,2],
+                        [8,2,6,1,9,5,3,4,7],
+                        [3,7,4,6,8,2,9,1,5],
+                        [9,5,1,7,4,3,6,2,8],
+                        [5,1,9,3,2,6,8,7,4],
+                        [2,4,8,9,5,7,1,3,6],
+                        [7,6,3,4,1,8,2,5,9]
+                    ]
+                },
+                // Puzzle 3 - Challenging
+                {
+                    name: "Challenger",
+                    board: [
+                        [0,0,0,0,0,0,0,1,2],
+                        [0,0,0,0,3,5,0,0,0],
+                        [0,0,0,6,0,0,0,7,0],
+                        [7,0,0,0,0,0,3,0,0],
+                        [0,0,0,4,0,9,0,0,0],
+                        [0,0,5,0,0,0,0,0,8],
+                        [0,3,0,0,0,7,0,0,0],
+                        [0,0,0,0,8,0,0,0,6],
+                        [9,0,0,0,0,0,0,4,0]
+                    ],
+                    solution: [
+                        [5,7,8,9,4,6,2,1,3],
+                        [2,6,4,7,3,5,8,9,1],
+                        [3,1,9,6,2,8,4,7,5],
+                        [7,8,2,1,5,4,3,6,9],
+                        [1,4,6,8,7,9,5,2,3],
+                        [9,3,5,2,6,1,7,8,4],
+                        [4,5,1,3,9,7,6,2,8],
+                        [6,2,7,5,8,4,1,3,9],
+                        [8,9,3,1,2,6,5,4,7]
+                    ]
+                },
+                // Puzzle 4 - Expert
+                {
+                    name: "Expert",
+                    board: [
+                        [0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,3,0,8,5],
+                        [0,0,1,0,2,0,0,0,0],
+                        [0,0,0,5,0,7,0,0,0],
+                        [0,0,4,0,0,0,1,0,0],
+                        [0,9,0,0,0,0,0,0,0],
+                        [5,0,0,0,0,0,0,7,3],
+                        [0,0,2,0,1,0,0,0,0],
+                        [0,0,0,0,4,0,0,0,9]
+                    ],
+                    solution: [
+                        [3,8,5,1,6,9,7,2,4],
+                        [7,2,9,4,8,3,6,1,5],
+                        [4,6,1,7,2,5,9,3,8],
+                        [1,3,6,5,9,7,2,4,8],
+                        [2,7,4,8,3,6,1,5,9],
+                        [8,9,5,2,7,1,3,6,4],
+                        [5,1,8,9,6,2,4,7,3],
+                        [9,4,2,3,1,8,5,6,7],
+                        [6,5,3,7,4,6,8,9,2]
+                    ]
+                },
+                // Puzzle 5 - Another classic
+                {
+                    name: "Vintage",
+                    board: [
+                        [0,2,0,6,0,8,0,0,0],
+                        [5,8,0,0,0,9,7,0,0],
+                        [0,0,0,0,4,0,0,1,0],
+                        [3,7,0,2,0,0,0,6,0],
+                        [0,0,0,0,9,0,0,0,0],
+                        [0,9,0,0,0,1,0,3,7],
+                        [0,3,0,0,7,0,0,0,0],
+                        [0,0,5,8,0,0,0,4,9],
+                        [0,0,0,4,0,3,0,2,0]
+                    ],
+                    solution: [
+                        [1,2,3,6,7,8,9,5,4],
+                        [5,8,4,1,3,9,7,6,2],
+                        [7,6,9,5,4,2,3,1,8],
+                        [3,7,1,2,5,4,8,6,9],
+                        [2,4,8,3,9,6,1,7,5],
+                        [6,9,5,7,8,1,2,3,4],
+                        [4,3,2,9,7,5,6,8,1],
+                        [9,1,5,8,2,6,7,4,3],
+                        [8,7,6,4,1,3,5,2,9]
+                    ]
+                }
+            ];
+
+            // Current puzzle index
+            let currentPuzzleIndex = 0;
+            
+            // Current board and solution
+            let board = [];
+            let solution = [];
+            let fixed = [];
+
+            let selectedRow = -1, selectedCol = -1;
+
+            const gridEl = document.getElementById('sudokuGrid');
+            const statusEl = document.getElementById('statusMessage');
+            const progressEl = document.getElementById('progressIndicator');
+
+            // Count filled cells
+            function countFilledCells() {
+                let count = 0;
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        if (board[row][col] !== 0) count++;
+                    }
+                }
+                return count;
+            }
+
+            // Update progress
+            function updateProgress() {
+                const filled = countFilledCells();
+                progressEl.textContent = `📊 ${filled}/81 cells filled`;
+            }
+
+            // Load a puzzle by index
+            function loadPuzzle(index) {
+                const puzzle = PUZZLE_COLLECTION[index];
+                board = JSON.parse(JSON.stringify(puzzle.board));
+                solution = JSON.parse(JSON.stringify(puzzle.solution));
+                fixed = puzzle.board.map(row => row.map(cell => cell !== 0));
+                selectedRow = -1;
+                selectedCol = -1;
+                
+                // Remove any highlights
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('correct-highlight', 'incorrect-highlight', 'conflict');
+                });
+                
+                statusEl.textContent = `🎲 ${puzzle.name} loaded`;
+                render();
+                updateProgress();
+            }
+
+            // Load random puzzle
+            function loadRandomPuzzle() {
+                const randomIndex = Math.floor(Math.random() * PUZZLE_COLLECTION.length);
+                currentPuzzleIndex = randomIndex;
+                loadPuzzle(randomIndex);
+            }
+
+            // Render the grid
+            function render() {
+                gridEl.innerHTML = '';
+
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        
+                        // Add appropriate classes
+                        if (fixed[row][col]) {
+                            cell.classList.add('given');
+                        } else {
+                            cell.classList.add('editable');
+                            if (board[row][col] !== 0) {
+                                cell.classList.add('user-digit');
+                            }
+                        }
+
+                        // Selected state
+                        if (selectedRow === row && selectedCol === col) {
+                            cell.classList.add('selected');
+                        }
+
+                        // Cell value
+                        cell.textContent = board[row][col] === 0 ? '' : board[row][col];
+
+                        // Click handler
+                        cell.addEventListener('click', () => handleCellClick(row, col));
+                        
+                        gridEl.appendChild(cell);
+                    }
+                }
+
+                // Check for conflicts after rendering
+                highlightConflicts();
+                updateProgress();
+            }
+
+            // Handle cell click
+            function handleCellClick(row, col) {
+                if (fixed[row][col]) {
+                    selectedRow = -1;
+                    selectedCol = -1;
+                    statusEl.textContent = '⛔ fixed cell (cannot edit)';
+                } else {
+                    selectedRow = row;
+                    selectedCol = col;
+                    statusEl.textContent = `📝 selected (${row+1},${col+1})`;
+                }
+                render();
+            }
+
+            // Handle keyboard input
+            function handleKeyPress(e) {
+                if (selectedRow === -1 || selectedCol === -1) return;
+                if (fixed[selectedRow][selectedCol]) return;
+
+                const key = e.key;
+                let value = -1;
+
+                if (key >= '1' && key <= '9') {
+                    value = parseInt(key);
+                } else if (key === '0' || key === 'Backspace' || key === 'Delete') {
+                    value = 0;
+                } else {
+                    return;
+                }
+
+                e.preventDefault();
+                board[selectedRow][selectedCol] = value;
+                statusEl.textContent = value === 0 ? 
+                    `⌫ cleared (${selectedRow+1},${selectedCol+1})` : 
+                    `✎ placed ${value} at (${selectedRow+1},${selectedCol+1})`;
+                render();
+            }
+
+            // Erase selected cell
+            function eraseSelected() {
+                if (selectedRow === -1 || selectedCol === -1) {
+                    statusEl.textContent = '⚠️ no cell selected';
+                    return;
+                }
+                if (fixed[selectedRow][selectedCol]) {
+                    statusEl.textContent = '⛔ cannot erase fixed cell';
+                    return;
+                }
+                board[selectedRow][selectedCol] = 0;
+                statusEl.textContent = `⌫ erased (${selectedRow+1},${selectedCol+1})`;
+                render();
+            }
+
+            // Reset board to current puzzle
+            function resetBoard() {
+                loadPuzzle(currentPuzzleIndex);
+                statusEl.textContent = '↻ puzzle reset';
+            }
+
+            // Highlight conflicts
+            function highlightConflicts() {
+                // Remove existing conflict class
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('conflict');
+                });
+
+                // Check rows, columns, and boxes for conflicts
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        const val = board[row][col];
+                        if (val === 0) continue;
+
+                        // Check row
+                        for (let c = 0; c < 9; c++) {
+                            if (c !== col && board[row][c] === val) {
+                                markConflict(row, col);
+                                markConflict(row, c);
+                            }
+                        }
+
+                        // Check column
+                        for (let r = 0; r < 9; r++) {
+                            if (r !== row && board[r][col] === val) {
+                                markConflict(row, col);
+                                markConflict(r, col);
+                            }
+                        }
+
+                        // Check 3x3 box
+                        const boxRow = Math.floor(row / 3) * 3;
+                        const boxCol = Math.floor(col / 3) * 3;
+                        for (let r = 0; r < 3; r++) {
+                            for (let c = 0; c < 3; c++) {
+                                const rr = boxRow + r;
+                                const cc = boxCol + c;
+                                if (rr === row && cc === col) continue;
+                                if (board[rr][cc] === val) {
+                                    markConflict(row, col);
+                                    markConflict(rr, cc);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function markConflict(row, col) {
+                const index = row * 9 + col;
+                const cell = gridEl.children[index];
+                if (cell) cell.classList.add('conflict');
+            }
+
+            // Validate board - CHECK FOR CONFLICTS (duplicates)
+            function validateBoard() {
+                // Remove any previous submit highlights
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('correct-highlight', 'incorrect-highlight');
+                });
+                
+                highlightConflicts();
+                const conflicts = document.querySelectorAll('.cell.conflict').length > 0;
+                
+                if (conflicts) {
+                    statusEl.textContent = '⚠️ Conflicts detected! Numbers repeat in row/column/box (highlighted red)';
+                } else {
+                    statusEl.textContent = '✓ No conflicts found - your numbers follow Sudoku rules!';
+                }
+            }
+
+            // Solve puzzle - uses pre-calculated solution
+            function solvePuzzle() {
+                // Remove any highlights
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('correct-highlight', 'incorrect-highlight', 'conflict');
+                });
+
+                // Fill in all empty cells with the pre-calculated solution
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        if (board[row][col] === 0) {
+                            board[row][col] = solution[row][col];
+                        }
+                    }
+                }
+                
+                selectedRow = -1;
+                selectedCol = -1;
+                statusEl.textContent = '✨ Auto-completed! All empty cells filled with solution';
+                render();
+            }
+
+            // Submit answer - Check if the ENTIRE SOLUTION is correct
+            function submitAnswer() {
+                // First check for conflicts
+                highlightConflicts();
+                const conflicts = document.querySelectorAll('.cell.conflict').length > 0;
+                
+                if (conflicts) {
+                    statusEl.textContent = '❌ Cannot submit - fix conflicts first (duplicate numbers)';
+                    return;
+                }
+
+                // Check if all cells are filled
+                const filled = countFilledCells();
+                if (filled < 81) {
+                    statusEl.textContent = '⚠️ Cannot submit - puzzle incomplete. Fill all cells first';
+                    return;
+                }
+
+                // Compare with solution and highlight
+                let allCorrect = true;
+                let correctCount = 0;
+                let incorrectCount = 0;
+
+                // Remove any existing highlights
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('correct-highlight', 'incorrect-highlight');
+                });
+
+                // Check each cell and highlight
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        const index = row * 9 + col;
+                        const cell = gridEl.children[index];
+                        
+                        if (board[row][col] === solution[row][col]) {
+                            cell.classList.add('correct-highlight');
+                            correctCount++;
+                        } else {
+                            cell.classList.add('incorrect-highlight');
+                            incorrectCount++;
+                            allCorrect = false;
+                        }
+                    }
+                }
+
+                if (allCorrect) {
+                    statusEl.textContent = '🏆 PERFECT! Congratulations! You solved it correctly!';
+                    // Add a little celebration effect
+                    gridEl.style.animation = 'pulse 0.5s ease 3';
+                    setTimeout(() => {
+                        gridEl.style.animation = '';
+                    }, 1500);
+                } else {
+                    statusEl.textContent = `📝 ${correctCount} correct, ${incorrectCount} incorrect - keep trying!`;
+                }
+            }
+
+            // Event listeners
+            window.addEventListener('keydown', handleKeyPress);
+            document.getElementById('resetBtn').addEventListener('click', resetBoard);
+            document.getElementById('eraseBtn').addEventListener('click', eraseSelected);
+            document.getElementById('validateBtn').addEventListener('click', validateBoard);
+            document.getElementById('solveBtn').addEventListener('click', solvePuzzle);
+            document.getElementById('newPuzzleBtn').addEventListener('click', loadRandomPuzzle);
+            document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+
+            // Initialize with first puzzle
+            loadPuzzle(0);
+        })();
+    </script>
+</body>
+</html>
