@@ -1,798 +1,838 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sudoku</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku — DSA Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f1117; --surface:#181c27; --surface2:#1f2436; --surface3:#252c40;
+  --border:#2e3650; --border2:#3d4a6e;
+  --accent:#6c8eff; --accent2:#a78bfa;
+  --gold:#f0b429; --green:#34d399; --red:#f87171; --orange:#fb923c; --pink:#f472b6;
+  --text:#e8eaf6; --text2:#8892b0; --text3:#4a5578;
+  --given-bg:#1a2035; --given-fg:#c8d6ff; --user-fg:#6c8eff;
+  --cell-size:56px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;
+  padding:24px 20px 60px;
+  font-family:'DM Sans',sans-serif;
+  color:var(--text);
+  background-image:
+    linear-gradient(rgba(108,142,255,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(108,142,255,0.025) 1px,transparent 1px);
+  background-size:40px 40px;
+}
 
-        body {
-            background: linear-gradient(145deg, #1a3f5a 0%, #2c5e7e 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+/* ── HEADER ── */
+.app-header{
+  width:100%;max-width:1200px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:28px;
+}
+.title{font-family:'DM Serif Display',serif;font-size:2.5rem;letter-spacing:3px;text-transform:uppercase;}
+.title span{color:var(--accent);font-style:italic;}
+.subtitle{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.progress-wrap{display:flex;align-items:center;gap:10px;}
+.progress-bar-bg{width:200px;height:5px;background:var(--surface3);border-radius:99px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .3s;}
+.progress-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text3);}
 
-        /* Main container - clean, professional card */
-        .game-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 32px;
-            padding: 32px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: fit-content;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
+/* ── MAIN LAYOUT ── */
+.main{display:grid;grid-template-columns:280px auto 280px;gap:24px;align-items:start;width:100%;max-width:1200px;}
 
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 28px;
-            padding: 0 8px;
-        }
+/* ── CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;}
+.card-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.left-col,.right-col{display:flex;flex-direction:column;gap:14px;}
 
-        .header h1 {
-            font-size: 2rem;
-            font-weight: 400;
-            color: #1e4b6e;
-            letter-spacing: 1px;
-        }
+/* ── SUDOKU GRID ── */
+.grid-wrap{position:relative;display:inline-block;}
+.sudoku-grid{
+  display:grid;
+  grid-template-columns:repeat(9,var(--cell-size));
+  grid-template-rows:repeat(9,var(--cell-size));
+  gap:2px;background:var(--border2);padding:2px;
+  border-radius:14px;
+  box-shadow:0 0 0 1px var(--border),0 20px 50px rgba(0,0,0,0.6);
+}
+.cell{
+  width:var(--cell-size);height:var(--cell-size);
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:1.45rem;font-weight:600;
+  cursor:pointer;transition:background .1s,transform .1s,box-shadow .1s;
+  border-radius:4px;position:relative;user-select:none;color:var(--text2);
+}
+.cell[data-col="2"],.cell[data-col="5"]{border-right:2px solid var(--border2);}
+.cell[data-row="2"],.cell[data-row="5"]{border-bottom:2px solid var(--border2);}
+.cell.given{background:var(--given-bg);color:var(--given-fg);cursor:default;}
+.cell.editable:hover:not(.solving):not(.backtrack){background:var(--surface3);transform:scale(1.05);box-shadow:0 0 0 2px var(--accent),0 4px 12px rgba(108,142,255,.2);z-index:2;}
+.cell.user-digit{color:var(--user-fg);}
+.cell.selected{background:rgba(108,142,255,.18)!important;box-shadow:inset 0 0 0 2px var(--accent)!important;color:#fff!important;z-index:3;}
+.cell.conflict{background:rgba(248,113,113,.15)!important;color:var(--red)!important;box-shadow:inset 0 0 0 2px var(--red)!important;}
+.cell.correct-highlight{background:rgba(52,211,153,.15)!important;box-shadow:inset 0 0 0 2px var(--green)!important;color:var(--green)!important;}
+.cell.incorrect-highlight{background:rgba(248,113,113,.15)!important;box-shadow:inset 0 0 0 2px var(--red)!important;color:var(--red)!important;}
+.cell.solving{background:rgba(240,180,41,.18)!important;box-shadow:inset 0 0 0 2px var(--gold),0 0 14px rgba(240,180,41,.3)!important;color:var(--gold)!important;animation:cellPop .2s ease;z-index:2;}
+.cell.backtrack{background:rgba(251,146,60,.12)!important;box-shadow:inset 0 0 0 2px var(--orange)!important;color:var(--orange)!important;}
+@keyframes cellPop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+.cell.step-number::after{content:attr(data-step);position:absolute;top:2px;right:3px;font-size:.45rem;font-family:'IBM Plex Mono',monospace;color:var(--gold);opacity:.8;line-height:1;}
+@keyframes solvedGlow{0%,100%{box-shadow:0 0 0 1px var(--border),0 20px 50px rgba(0,0,0,.6)}50%{box-shadow:0 0 0 2px var(--green),0 0 60px rgba(52,211,153,.3),0 20px 50px rgba(0,0,0,.6)}}
+.sudoku-grid.solved{animation:solvedGlow .8s ease 3;}
+.stop-badge{display:none;position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:1.5px;padding:4px 14px;border-radius:99px;white-space:nowrap;text-transform:uppercase;box-shadow:0 2px 12px rgba(248,113,113,.5);z-index:20;}
+.stop-badge.visible{display:block;animation:badgeFade .2s ease;}
+@keyframes badgeFade{from{opacity:0;transform:translateX(-50%) translateY(-4px)}}
 
-        .version-badge {
-            background: #e8f0fe;
-            padding: 6px 18px;
-            border-radius: 40px;
-            color: #1e4b6e;
-            font-size: 0.9rem;
-            font-weight: 500;
-            border: 1px solid rgba(30, 75, 110, 0.2);
-        }
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .14s;white-space:nowrap;}
+.btn:hover:not(:disabled){background:var(--surface3);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3);}
+.btn:active:not(:disabled){transform:translateY(0);}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.btn-solve{background:linear-gradient(135deg,#3b5bdb,var(--accent));border:none;color:#fff;padding:12px 20px;font-size:.92rem;font-weight:600;box-shadow:0 4px 20px rgba(108,142,255,.3);}
+.btn-solve:hover:not(:disabled){background:linear-gradient(135deg,#4a6cee,#7da4ff);box-shadow:0 6px 28px rgba(108,142,255,.45);border:none;}
+.btn-benchmark{background:linear-gradient(135deg,#7c3aed,var(--accent2));border:none;color:#fff;padding:12px 20px;font-size:.92rem;font-weight:600;box-shadow:0 4px 20px rgba(167,139,250,.3);}
+.btn-benchmark:hover:not(:disabled){background:linear-gradient(135deg,#8b5cf6,#c084fc);box-shadow:0 6px 28px rgba(167,139,250,.5);border:none;}
+.btn-stop{background:linear-gradient(135deg,#c0392b,var(--red));border:none;color:#fff;padding:12px 20px;font-size:.92rem;font-weight:700;box-shadow:0 4px 20px rgba(248,113,113,.4);animation:stopPulse 1s ease-in-out infinite;}
+@keyframes stopPulse{0%,100%{box-shadow:0 4px 20px rgba(248,113,113,.4)}50%{box-shadow:0 4px 32px rgba(248,113,113,.7)}}
+.btn-stop:hover:not(:disabled){background:linear-gradient(135deg,#e74c3c,#ff8a80);box-shadow:0 6px 32px rgba(248,113,113,.6);border:none;}
+.btn-validate{border-color:rgba(108,142,255,.4);}
+.btn-validate:hover:not(:disabled){background:rgba(108,142,255,.1);border-color:var(--accent);}
+.btn-submit{background:rgba(240,180,41,.1);border-color:rgba(240,180,41,.4);color:var(--gold);}
+.btn-submit:hover:not(:disabled){background:rgba(240,180,41,.18);border-color:var(--gold);}
+.btn-new{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3);color:var(--green);}
+.btn-new:hover:not(:disabled){background:rgba(52,211,153,.15);border-color:var(--green);}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn-grid .btn{width:100%;}
+.btn-grid .btn-full{grid-column:1/-1;}
+.solve-actions{display:flex;flex-direction:column;gap:8px;}
 
-        /* Sudoku Grid */
-        .sudoku-grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            gap: 4px;
-            background: #c0d3e3;
-            padding: 4px;
-            border-radius: 16px;
-            margin-bottom: 28px;
-            border: 2px solid #a0b9cf;
-        }
+/* ── STATUS BAR ── */
+.status-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--text2);min-height:40px;transition:border-color .2s,color .2s;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .2s;}
+.status-bar.solving{border-color:var(--gold);color:var(--gold);}
+.status-bar.solving .status-dot{background:var(--gold);box-shadow:0 0 6px var(--gold);animation:dotBlink .6s ease infinite;}
+.status-bar.stopped{border-color:var(--red);color:var(--red);}
+.status-bar.stopped .status-dot{background:var(--red);}
+.status-bar.success{border-color:var(--green);color:var(--green);}
+.status-bar.success .status-dot{background:var(--green);box-shadow:0 0 6px var(--green);}
+.status-bar.error{border-color:var(--red);color:var(--red);}
+.status-bar.error .status-dot{background:var(--red);}
+.status-bar.benchmarking{border-color:var(--accent2);color:var(--accent2);}
+.status-bar.benchmarking .status-dot{background:var(--accent2);box-shadow:0 0 6px var(--accent2);animation:dotBlink .4s ease infinite;}
+@keyframes dotBlink{0%,100%{opacity:1}50%{opacity:.3}}
 
-        .cell {
-            aspect-ratio: 1;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            font-weight: 500;
-            color: #1e3b4f;
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            border-radius: 4px;
-        }
+/* ── METRICS GRID ── */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.metric{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+.metric-val{font-family:'IBM Plex Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent);display:block;line-height:1;}
+.metric-val.orange{color:var(--orange);}
+.metric-val.green{color:var(--green);}
+.metric-val.gold{color:var(--gold);}
+.metric-val.pink{color:var(--pink);}
+.metric-lbl{font-size:.67rem;color:var(--text3);margin-top:4px;letter-spacing:.4px;}
 
-        /* 3x3 block borders - clean and visible */
-        .cell:nth-child(3n) {
-            margin-right: 4px;
-        }
-        .cell:nth-child(9n) {
-            margin-right: 0;
-        }
-        .cell:nth-child(n+19):nth-child(-n+27),
-        .cell:nth-child(n+46):nth-child(-n+54) {
-            margin-bottom: 4px;
-        }
+/* ── COMPLEXITY CARD ── */
+.complexity-row{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.complexity-row:last-child{border-bottom:none;}
+.cx-label{font-size:.78rem;color:var(--text2);}
+.cx-badge{font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:6px;letter-spacing:.5px;}
+.cx-time{background:rgba(108,142,255,.15);color:var(--accent);}
+.cx-space{background:rgba(52,211,153,.12);color:var(--green);}
+.cx-note{font-size:.7rem;color:var(--text3);margin-top:2px;font-style:italic;}
 
-        /* Cell states */
-        .cell.given {
-            background: #eef4fa;
-            color: #1e4b6e;
-            font-weight: 600;
-        }
+/* ── ALGO SELECT ── */
+.algo-select-wrap{position:relative;}
+.algo-select-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--accent);pointer-events:none;font-size:.8rem;}
+select{width:100%;padding:10px 32px 10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.85rem;cursor:pointer;appearance:none;outline:none;transition:border-color .15s,box-shadow .15s;}
+select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,142,255,.15);}
+.algo-desc{margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent);font-size:.78rem;color:var(--text2);line-height:1.55;min-height:48px;}
 
-        .cell.editable {
-            background: white;
-        }
+/* ── BENCHMARK RESULTS PANEL ── */
+#benchPanel{display:none;}
+.bench-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.bench-headline{font-family:'DM Serif Display',serif;font-size:1.15rem;color:var(--text);}
+.best-badge{background:linear-gradient(135deg,var(--gold),#fbbf24);color:#000;font-family:'IBM Plex Mono',monospace;font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:1px;text-transform:uppercase;}
 
-        .cell.editable:hover {
-            background: #f0f9ff;
-            transform: scale(1.02);
-        }
+.bench-table{width:100%;border-collapse:separate;border-spacing:0 6px;}
+.bench-table th{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:0 10px 6px;text-align:left;border-bottom:1px solid var(--border);}
+.bench-table td{padding:10px;font-size:.82rem;background:var(--surface2);border:1px solid transparent;}
+.bench-table td:first-child{border-radius:8px 0 0 8px;border-left-color:var(--border);}
+.bench-table td:last-child{border-radius:0 8px 8px 0;border-right-color:var(--border);}
+.bench-table tr td{border-top-color:var(--border);border-bottom-color:var(--border);}
+.bench-table .mono{font-family:'IBM Plex Mono',monospace;font-size:.78rem;}
+.bench-table .winner td{background:rgba(240,180,41,.08);border-top-color:rgba(240,180,41,.3)!important;border-bottom-color:rgba(240,180,41,.3)!important;}
+.bench-table .winner td:first-child{border-left-color:var(--gold)!important;}
+.bench-table .winner td:last-child{border-right-color:rgba(240,180,41,.3)!important;}
 
-        .cell.selected {
-            background: #fff3c9;
-            border: 2px solid #ffb347;
-        }
+.bar-wrap{width:100%;height:6px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-top:4px;}
+.bar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.16,1,.3,1);}
 
-        .cell.user-digit {
-            color: #0066a0;
-            font-weight: 600;
-        }
+.winner-summary{margin-top:16px;padding:14px 16px;background:rgba(240,180,41,.07);border:1px solid rgba(240,180,41,.25);border-radius:12px;border-left:3px solid var(--gold);}
+.winner-summary-title{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+.winner-summary-body{font-size:.82rem;color:var(--text2);line-height:1.6;}
+.winner-summary-body strong{color:var(--text);}
 
-        .cell.conflict {
-            background: #ffe5e5;
-            color: #c41e1e;
-        }
+/* ── SHORTCUTS ── */
+.shortcuts{display:flex;flex-wrap:wrap;gap:6px 12px;}
+.shortcut-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--text3);}
+kbd{background:var(--surface3);border:1px solid var(--border2);padding:2px 6px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);}
 
-        .cell.correct-highlight {
-            background: #e6ffe6;
-            border: 2px solid #2ecc71;
-        }
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--text3);}
+.legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
 
-        .cell.incorrect-highlight {
-            background: #ffe6e6;
-            border: 2px solid #e74c3c;
-        }
+/* ── BENCHMARK BOTTOM SECTION ── */
+.bench-section{width:100%;max-width:1200px;margin-top:24px;}
 
-        /* Control Panel */
-        .control-panel {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            background: #f0f5fa;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #1e4b6e;
-            cursor: pointer;
-            transition: all 0.15s;
-            border: 1px solid #cdddee;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn:hover {
-            background: #e1ecf5;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-primary {
-            background: #1e4b6e;
-            color: white;
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background: #2a5f88;
-        }
-
-        .btn-success {
-            background: #2d6a4f;
-            color: white;
-            border: none;
-        }
-
-        .btn-success:hover {
-            background: #40916c;
-        }
-
-        .btn-submit {
-            background: #f39c12;
-            color: white;
-            border: none;
-        }
-
-        .btn-submit:hover {
-            background: #e67e22;
-        }
-
-        .btn-validate {
-            background: #3498db;
-            color: white;
-            border: none;
-        }
-
-        .btn-validate:hover {
-            background: #2980b9;
-        }
-
-        .status-display {
-            background: #f0f5fa;
-            padding: 10px 28px;
-            border-radius: 30px;
-            font-size: 1rem;
-            color: #1e4b6e;
-            border: 1px solid #cdddee;
-            min-width: 220px;
-            text-align: center;
-        }
-
-        /* Progress indicator */
-        .progress-indicator {
-            margin-top: 16px;
-            font-size: 0.9rem;
-            color: #2d6a4f;
-            text-align: center;
-        }
-
-        /* Button info tooltip */
-        .button-info {
-            margin-top: 16px;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
-            font-size: 0.85rem;
-            color: #4a6b84;
-            background: rgba(255,255,255,0.5);
-            padding: 12px;
-            border-radius: 50px;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .info-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .dot-validate { background: #3498db; }
-        .dot-submit { background: #f39c12; }
-        .dot-auto { background: #1e4b6e; }
-        .dot-reset { background: #f0f5fa; border: 1px solid #cdddee; }
-
-        /* Keyboard shortcuts */
-        .shortcuts {
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid #d0e0f0;
-            display: flex;
-            gap: 24px;
-            color: #4a6b84;
-            font-size: 0.9rem;
-            flex-wrap: wrap;
-        }
-
-        .shortcut-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        kbd {
-            background: #edf2f7;
-            border: 1px solid #cbd5e0;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            color: #2d3748;
-        }
-    </style>
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .main{grid-template-columns:1fr;justify-items:center;}
+  .left-col,.right-col{width:100%;max-width:520px;}
+  :root{--cell-size:42px;}
+  .app-header{flex-direction:column;align-items:flex-start;gap:10px;}
+  .progress-bar-bg{width:160px;}
+}
+</style>
 </head>
 <body>
-    <div class="game-container">
-        <div class="header">
-            <h1>AETHER SUDOKU</h1>
-            <span class="version-badge">professional edition</span>
-        </div>
 
-        <!-- Sudoku grid will be injected here -->
-        <div id="sudokuGrid" class="sudoku-grid"></div>
+<!-- ── HEADER ────────────────────────────────────────────── -->
+<header class="app-header">
+  <div>
+    <h1 class="title">Su<span>doku</span></h1>
+    <p class="subtitle">DSA Algorithm Visualiser &amp; Complexity Analyser</p>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <span class="progress-label" id="progressLabel">0 / 81</span>
+  </div>
+</header>
 
-        <!-- Progress indicator -->
-        <div id="progressIndicator" class="progress-indicator">📊 0/81 cells filled</div>
+<!-- ── MAIN GRID ──────────────────────────────────────────── -->
+<div class="main">
 
-        <!-- Button explanation -->
-        <div class="button-info">
-            <div class="info-item"><span class="info-dot dot-validate"></span> Validate: Check for conflicts (duplicates)</div>
-            <div class="info-item"><span class="info-dot dot-submit"></span> Submit: Check your final answer</div>
-            <div class="info-item"><span class="info-dot dot-auto"></span> Auto Complete: Fill remaining cells</div>
-            <div class="info-item"><span class="info-dot dot-reset"></span> Reset: Start this puzzle over</div>
-        </div>
+  <!-- LEFT COL -->
+  <div class="left-col">
 
-        <!-- Controls -->
-        <div class="control-panel">
-            <div class="button-group">
-                <button class="btn" id="resetBtn">↻ reset</button>
-                <button class="btn" id="eraseBtn">⌫ erase</button>
-                <button class="btn btn-validate" id="validateBtn">✓ validate</button>
-                <button class="btn btn-success" id="newPuzzleBtn">🎲 new puzzle</button>
-                <button class="btn btn-submit" id="submitBtn">📤 submit answer</button>
-            </div>
-            <button class="btn btn-primary" id="solveBtn">✨ auto complete</button>
-            <div id="statusMessage" class="status-display">⚡ ready</div>
-        </div>
-
-        <!-- Keyboard shortcuts -->
-        <div class="shortcuts">
-            <div class="shortcut-item"><kbd>1-9</kbd> enter digit</div>
-            <div class="shortcut-item"><kbd>0</kbd> or <kbd>⌫</kbd> clear</div>
-            <div class="shortcut-item"><kbd>click</kbd> select cell</div>
-            <div class="shortcut-item"><kbd>🎲</kbd> new puzzle</div>
-        </div>
+    <!-- Algorithm picker -->
+    <div class="card">
+      <div class="card-title">Algorithm</div>
+      <div class="algo-select-wrap">
+        <select id="algorithmSelect">
+          <option value="backtrack">🔄  Backtracking</option>
+          <option value="greedy">⚡  Greedy + Backtracking</option>
+          <option value="divide">📦  Divide &amp; Conquer</option>
+          <option value="dp">🧠  Dynamic Programming (MRV)</option>
+          <option value="hybrid">🚀  Hybrid — All Methods</option>
+        </select>
+      </div>
+      <div class="algo-desc" id="algoDesc"></div>
     </div>
 
-    <script>
-        (function() {
-            // Collection of verified classic Sudoku puzzles (all have valid solutions)
-            const PUZZLE_COLLECTION = [
-                // Puzzle 1 - Classic easy
-                {
-                    name: "Classic #1",
-                    board: [
-                        [5,3,0,0,7,0,0,0,0],
-                        [6,0,0,1,9,5,0,0,0],
-                        [0,9,8,0,0,0,0,6,0],
-                        [8,0,0,0,6,0,0,0,3],
-                        [4,0,0,8,0,3,0,0,1],
-                        [7,0,0,0,2,0,0,0,6],
-                        [0,6,0,0,0,0,2,8,0],
-                        [0,0,0,4,1,9,0,0,5],
-                        [0,0,0,0,8,0,0,7,9]
-                    ],
-                    solution: [
-                        [5,3,4,6,7,8,9,1,2],
-                        [6,7,2,1,9,5,3,4,8],
-                        [1,9,8,3,4,2,5,6,7],
-                        [8,5,9,7,6,1,4,2,3],
-                        [4,2,6,8,5,3,7,9,1],
-                        [7,1,3,9,2,4,8,5,6],
-                        [9,6,1,5,3,7,2,8,4],
-                        [2,8,7,4,1,9,6,3,5],
-                        [3,4,5,2,8,6,1,7,9]
-                    ]
-                },
-                // Puzzle 2 - Medium
-                {
-                    name: "Moderate",
-                    board: [
-                        [0,0,0,2,6,0,7,0,1],
-                        [6,8,0,0,7,0,0,9,0],
-                        [1,9,0,0,0,4,5,0,0],
-                        [8,2,0,1,0,0,0,4,0],
-                        [0,0,4,6,0,2,9,0,0],
-                        [0,5,0,0,0,3,0,2,8],
-                        [0,0,9,3,0,0,0,7,4],
-                        [0,4,0,0,5,0,0,3,6],
-                        [7,0,3,0,1,8,0,0,0]
-                    ],
-                    solution: [
-                        [4,3,5,2,6,9,7,8,1],
-                        [6,8,2,5,7,1,4,9,3],
-                        [1,9,7,8,3,4,5,6,2],
-                        [8,2,6,1,9,5,3,4,7],
-                        [3,7,4,6,8,2,9,1,5],
-                        [9,5,1,7,4,3,6,2,8],
-                        [5,1,9,3,2,6,8,7,4],
-                        [2,4,8,9,5,7,1,3,6],
-                        [7,6,3,4,1,8,2,5,9]
-                    ]
-                },
-                // Puzzle 3 - Challenging
-                {
-                    name: "Challenger",
-                    board: [
-                        [0,0,0,0,0,0,0,1,2],
-                        [0,0,0,0,3,5,0,0,0],
-                        [0,0,0,6,0,0,0,7,0],
-                        [7,0,0,0,0,0,3,0,0],
-                        [0,0,0,4,0,9,0,0,0],
-                        [0,0,5,0,0,0,0,0,8],
-                        [0,3,0,0,0,7,0,0,0],
-                        [0,0,0,0,8,0,0,0,6],
-                        [9,0,0,0,0,0,0,4,0]
-                    ],
-                    solution: [
-                        [5,7,8,9,4,6,2,1,3],
-                        [2,6,4,7,3,5,8,9,1],
-                        [3,1,9,6,2,8,4,7,5],
-                        [7,8,2,1,5,4,3,6,9],
-                        [1,4,6,8,7,9,5,2,3],
-                        [9,3,5,2,6,1,7,8,4],
-                        [4,5,1,3,9,7,6,2,8],
-                        [6,2,7,5,8,4,1,3,9],
-                        [8,9,3,1,2,6,5,4,7]
-                    ]
-                },
-                // Puzzle 4 - Expert
-                {
-                    name: "Expert",
-                    board: [
-                        [0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,3,0,8,5],
-                        [0,0,1,0,2,0,0,0,0],
-                        [0,0,0,5,0,7,0,0,0],
-                        [0,0,4,0,0,0,1,0,0],
-                        [0,9,0,0,0,0,0,0,0],
-                        [5,0,0,0,0,0,0,7,3],
-                        [0,0,2,0,1,0,0,0,0],
-                        [0,0,0,0,4,0,0,0,9]
-                    ],
-                    solution: [
-                        [3,8,5,1,6,9,7,2,4],
-                        [7,2,9,4,8,3,6,1,5],
-                        [4,6,1,7,2,5,9,3,8],
-                        [1,3,6,5,9,7,2,4,8],
-                        [2,7,4,8,3,6,1,5,9],
-                        [8,9,5,2,7,1,3,6,4],
-                        [5,1,8,9,6,2,4,7,3],
-                        [9,4,2,3,1,8,5,6,7],
-                        [6,5,3,7,4,6,8,9,2]
-                    ]
-                },
-                // Puzzle 5 - Another classic
-                {
-                    name: "Vintage",
-                    board: [
-                        [0,2,0,6,0,8,0,0,0],
-                        [5,8,0,0,0,9,7,0,0],
-                        [0,0,0,0,4,0,0,1,0],
-                        [3,7,0,2,0,0,0,6,0],
-                        [0,0,0,0,9,0,0,0,0],
-                        [0,9,0,0,0,1,0,3,7],
-                        [0,3,0,0,7,0,0,0,0],
-                        [0,0,5,8,0,0,0,4,9],
-                        [0,0,0,4,0,3,0,2,0]
-                    ],
-                    solution: [
-                        [1,2,3,6,7,8,9,5,4],
-                        [5,8,4,1,3,9,7,6,2],
-                        [7,6,9,5,4,2,3,1,8],
-                        [3,7,1,2,5,4,8,6,9],
-                        [2,4,8,3,9,6,1,7,5],
-                        [6,9,5,7,8,1,2,3,4],
-                        [4,3,2,9,7,5,6,8,1],
-                        [9,1,5,8,2,6,7,4,3],
-                        [8,7,6,4,1,3,5,2,9]
-                    ]
-                }
-            ];
+    <!-- Complexity for selected algorithm -->
+    <div class="card" id="complexityCard">
+      <div class="card-title">Complexity — Selected Algorithm</div>
+      <div id="complexityBody">
+        <div class="complexity-row">
+          <div><div class="cx-label">⏱ Time Complexity</div><div class="cx-note" id="cxTimeNote"></div></div>
+          <span class="cx-badge cx-time" id="cxTime">—</span>
+        </div>
+        <div class="complexity-row">
+          <div><div class="cx-label">📦 Space Complexity</div><div class="cx-note" id="cxSpaceNote"></div></div>
+          <span class="cx-badge cx-space" id="cxSpace">—</span>
+        </div>
+        <div class="complexity-row">
+          <div><div class="cx-label">🔄 Worst-case Backtracks</div></div>
+          <span class="cx-badge cx-time" id="cxBacktrack">—</span>
+        </div>
+      </div>
+    </div>
 
-            // Current puzzle index
-            let currentPuzzleIndex = 0;
-            
-            // Current board and solution
-            let board = [];
-            let solution = [];
-            let fixed = [];
+    <!-- Solve actions -->
+    <div class="solve-actions">
+      <button class="btn btn-solve" id="solveBtn">✨ Solve with Algorithm</button>
+      <button class="btn btn-benchmark" id="benchmarkBtn">📊 Benchmark All Algorithms</button>
+      <button class="btn btn-stop" id="stopBtn" style="display:none">⏹ Stop Solving</button>
+    </div>
 
-            let selectedRow = -1, selectedCol = -1;
+    <!-- Status -->
+    <div class="status-bar" id="statusBar">
+      <span class="status-dot"></span>
+      <span id="statusText">Ready — select a puzzle and an algorithm</span>
+    </div>
 
-            const gridEl = document.getElementById('sudokuGrid');
-            const statusEl = document.getElementById('statusMessage');
-            const progressEl = document.getElementById('progressIndicator');
+    <!-- Live metrics -->
+    <div class="card">
+      <div class="card-title">Live Metrics</div>
+      <div class="metrics-grid">
+        <div class="metric"><span class="metric-val" id="mSteps">—</span><div class="metric-lbl">Steps taken</div></div>
+        <div class="metric"><span class="metric-val orange" id="mBacktracks">—</span><div class="metric-lbl">Backtracks</div></div>
+        <div class="metric"><span class="metric-val green" id="mCache">—</span><div class="metric-lbl">Cache hits</div></div>
+        <div class="metric"><span class="metric-val gold" id="mDepth">—</span><div class="metric-lbl">Max depth</div></div>
+        <div class="metric" style="grid-column:1/-1"><span class="metric-val pink" id="mTime">—</span><div class="metric-lbl">Time elapsed</div></div>
+      </div>
+    </div>
 
-            // Count filled cells
-            function countFilledCells() {
-                let count = 0;
-                for (let row = 0; row < 9; row++) {
-                    for (let col = 0; col < 9; col++) {
-                        if (board[row][col] !== 0) count++;
-                    }
-                }
-                return count;
-            }
+  </div>
 
-            // Update progress
-            function updateProgress() {
-                const filled = countFilledCells();
-                progressEl.textContent = `📊 ${filled}/81 cells filled`;
-            }
+  <!-- CENTRE — GRID -->
+  <div>
+    <div class="grid-wrap">
+      <div class="stop-badge" id="stopBadge">Stopped</div>
+      <div class="sudoku-grid" id="sudokuGrid"></div>
+    </div>
+  </div>
 
-            // Load a puzzle by index
-            function loadPuzzle(index) {
-                const puzzle = PUZZLE_COLLECTION[index];
-                board = JSON.parse(JSON.stringify(puzzle.board));
-                solution = JSON.parse(JSON.stringify(puzzle.solution));
-                fixed = puzzle.board.map(row => row.map(cell => cell !== 0));
-                selectedRow = -1;
-                selectedCol = -1;
-                
-                // Remove any highlights
-                document.querySelectorAll('.cell').forEach(cell => {
-                    cell.classList.remove('correct-highlight', 'incorrect-highlight', 'conflict');
-                });
-                
-                statusEl.textContent = `🎲 ${puzzle.name} loaded`;
-                render();
-                updateProgress();
-            }
+  <!-- RIGHT COL -->
+  <div class="right-col">
 
-            // Load random puzzle
-            function loadRandomPuzzle() {
-                const randomIndex = Math.floor(Math.random() * PUZZLE_COLLECTION.length);
-                currentPuzzleIndex = randomIndex;
-                loadPuzzle(randomIndex);
-            }
+    <!-- Puzzle controls -->
+    <div class="card">
+      <div class="card-title">Puzzle</div>
+      <div class="btn-grid">
+        <button class="btn btn-new btn-full" id="newPuzzleBtn">🎲 New Puzzle</button>
+        <button class="btn" id="resetBtn">↻ Reset</button>
+        <button class="btn" id="generateBtn">⚙ Generate</button>
+        <button class="btn" id="eraseBtn">⌫ Erase</button>
+        <button class="btn btn-validate" id="validateBtn">✓ Validate</button>
+        <button class="btn btn-submit btn-full" id="submitBtn">📤 Submit Answer</button>
+      </div>
+    </div>
 
-            // Render the grid
-            function render() {
-                gridEl.innerHTML = '';
+    <!-- About algorithms -->
+    <div class="card">
+      <div class="card-title">Algorithm Notes</div>
+      <div style="font-size:.78rem;color:var(--text2);line-height:1.65;display:flex;flex-direction:column;gap:8px;">
+        <div><strong style="color:var(--text)">Backtracking</strong> — recursive trial-and-error, guaranteed solution if one exists.</div>
+        <div><strong style="color:var(--text)">Greedy</strong> — fills naked singles first; greatly reduces backtracking on easy/medium puzzles.</div>
+        <div><strong style="color:var(--text)">Divide &amp; Conquer</strong> — decomposes into 3×3 sub-problems before cross-box resolution.</div>
+        <div><strong style="color:var(--text)">DP + MRV</strong> — memoises constraint data; MRV heuristic picks the most constrained cell first.</div>
+        <div><strong style="color:var(--text)">Hybrid</strong> — chains Greedy → D&amp;C → DP+MRV. Most efficient overall.</div>
+      </div>
+    </div>
 
-                for (let row = 0; row < 9; row++) {
-                    for (let col = 0; col < 9; col++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'cell';
-                        
-                        // Add appropriate classes
-                        if (fixed[row][col]) {
-                            cell.classList.add('given');
-                        } else {
-                            cell.classList.add('editable');
-                            if (board[row][col] !== 0) {
-                                cell.classList.add('user-digit');
-                            }
-                        }
+    <!-- Legend -->
+    <div class="card">
+      <div class="card-title">Legend</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(240,180,41,.6);box-shadow:0 0 4px rgba(240,180,41,.5)"></div>Placing digit</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(251,146,60,.5)"></div>Backtracking</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(52,211,153,.4)"></div>Correct</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(248,113,113,.4)"></div>Conflict</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(108,142,255,.35)"></div>Selected</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1a2035;outline:1px solid #c8d6ff"></div>Given clue</div>
+      </div>
+    </div>
 
-                        // Selected state
-                        if (selectedRow === row && selectedCol === col) {
-                            cell.classList.add('selected');
-                        }
+    <!-- Keyboard shortcuts -->
+    <div class="card">
+      <div class="card-title">Keyboard</div>
+      <div class="shortcuts">
+        <div class="shortcut-item"><kbd>1</kbd>–<kbd>9</kbd> enter digit</div>
+        <div class="shortcut-item"><kbd>0</kbd>/<kbd>⌫</kbd> clear</div>
+        <div class="shortcut-item"><kbd>Click</kbd> select</div>
+        <div class="shortcut-item"><kbd>Esc</kbd> deselect</div>
+      </div>
+    </div>
 
-                        // Cell value
-                        cell.textContent = board[row][col] === 0 ? '' : board[row][col];
+  </div>
+</div>
 
-                        // Click handler
-                        cell.addEventListener('click', () => handleCellClick(row, col));
-                        
-                        gridEl.appendChild(cell);
-                    }
-                }
+<!-- ── BENCHMARK RESULTS (full width, below grid) ──────────── -->
+<div class="bench-section">
+  <div id="benchPanel" class="card" style="margin-top:8px;">
+    <div class="bench-title-row">
+      <span class="bench-headline">📊 Algorithm Benchmark Results</span>
+      <span class="best-badge" id="bestBadge">🏆 Best: —</span>
+    </div>
 
-                // Check for conflicts after rendering
-                highlightConflicts();
-                updateProgress();
-            }
+    <table class="bench-table" id="benchTable">
+      <thead>
+        <tr>
+          <th>Algorithm</th>
+          <th>Time (ms)</th>
+          <th>Steps</th>
+          <th>Backtracks</th>
+          <th>Cache Hits</th>
+          <th>Max Depth</th>
+          <th>Time Complexity</th>
+          <th>Space Complexity</th>
+          <th>Performance</th>
+        </tr>
+      </thead>
+      <tbody id="benchBody"></tbody>
+    </table>
 
-            // Handle cell click
-            function handleCellClick(row, col) {
-                if (fixed[row][col]) {
-                    selectedRow = -1;
-                    selectedCol = -1;
-                    statusEl.textContent = '⛔ fixed cell (cannot edit)';
-                } else {
-                    selectedRow = row;
-                    selectedCol = col;
-                    statusEl.textContent = `📝 selected (${row+1},${col+1})`;
-                }
-                render();
-            }
+    <div class="winner-summary" id="winnerSummary" style="display:none">
+      <div class="winner-summary-title">🏆 Analysis — Best Algorithm</div>
+      <div class="winner-summary-body" id="winnerSummaryBody"></div>
+    </div>
+  </div>
+</div>
 
-            // Handle keyboard input
-            function handleKeyPress(e) {
-                if (selectedRow === -1 || selectedCol === -1) return;
-                if (fixed[selectedRow][selectedCol]) return;
+<script>
+(function(){
 
-                const key = e.key;
-                let value = -1;
+// ── COMPLEXITY DATABASE ──────────────────────────────────────
+const COMPLEXITY = {
+  backtrack:{
+    time:'O(9^n)', timeNote:'n = number of empty cells. Tries up to 9 values per cell.',
+    space:'O(n)', spaceNote:'Recursion stack depth equals number of empty cells.',
+    worstBacktrack:'O(9^81)' , color:'#6c8eff',
+    summary:'Pure backtracking explores a 9-ary tree of depth n. In the worst case every branch is explored, giving exponential time. Space is linear (stack depth). Best for: understanding, simple correctness.'
+  },
+  greedy:{
+    time:'O(9^n)', timeNote:'Greedy pre-pass reduces n significantly; remaining cells still use backtracking.',
+    space:'O(n)', spaceNote:'Recursion stack + O(81) board. Proportional to empty cells.',
+    worstBacktrack:'O(9^k)', color:'#fb923c',
+    summary:'Greedy fills "naked singles" in O(81) passes before invoking backtracking, reducing k (remaining empties) dramatically. On easy/medium puzzles k approaches 0. Time complexity class is the same as backtracking but the constant is far smaller.'
+  },
+  divide:{
+    time:'O(9^n)', timeNote:'Box-phase solves easy singles; cross-box remainder still needs backtracking.',
+    space:'O(n)', spaceNote:'Stack per box solve + shared board. Overall O(n).',
+    worstBacktrack:'O(9^m)', color:'#34d399',
+    summary:'Divide & Conquer reduces the problem into 9 sub-problems (3×3 boxes). Each box is solved greedily first, shrinking the global backtracking space. Space remains linear. Best for: structured thinking and presentations.'
+  },
+  dp:{
+    time:'O(9^n)', timeNote:'Same asymptotic class but MRV heuristic prunes branches aggressively.',
+    space:'O(n + C)', spaceNote:'C = cache entries. Cache grows with board states visited; bounded in practice.',
+    worstBacktrack:'O(9^k)', color:'#a78bfa',
+    summary:'DP memoises row/column constraint lookups avoiding redundant set-building. MRV (Minimum Remaining Values) always picks the most constrained cell, cutting the branching factor. Practically far faster than plain backtracking on hard puzzles despite the same Big-O class.'
+  },
+  hybrid:{
+    time:'O(9^n)', timeNote:'Greedy + box pre-processing minimises n before DP+MRV finishes the job.',
+    space:'O(n + C)', spaceNote:'Combines stack depth, cache, and board copy overhead.',
+    worstBacktrack:'O(9^r)', color:'#f0b429',
+    summary:'Hybrid chains every optimisation: naked-single elimination, box decomposition, then DP+MRV backtracking on the tiny remainder. In practice this resolves even "Expert" puzzles with single-digit backtrack counts. The best overall strategy for any difficulty level.'
+  }
+};
 
-                if (key >= '1' && key <= '9') {
-                    value = parseInt(key);
-                } else if (key === '0' || key === 'Backspace' || key === 'Delete') {
-                    value = 0;
-                } else {
-                    return;
-                }
+const ALGO_DESC = {
+  backtrack:'Fills cells left-to-right, top-to-bottom. Tries 1–9 and backtracks on conflict. Pure recursive trial-and-error.',
+  greedy:'Pre-fills naked singles (cells with only 1 valid candidate), dramatically reducing the search space before backtracking.',
+  divide:'Treats each 3×3 box as an independent sub-problem, solving boxes in isolation before handling cross-box dependencies.',
+  dp:'Memoises constraint lookups per cell state. MRV heuristic always picks the most constrained empty cell first.',
+  hybrid:'Chains all methods: Greedy fills → Box solving → DP+MRV backtracking. Best overall efficiency.'
+};
 
-                e.preventDefault();
-                board[selectedRow][selectedCol] = value;
-                statusEl.textContent = value === 0 ? 
-                    `⌫ cleared (${selectedRow+1},${selectedCol+1})` : 
-                    `✎ placed ${value} at (${selectedRow+1},${selectedCol+1})`;
-                render();
-            }
+const ALGO_NAMES = {backtrack:'Backtracking',greedy:'Greedy + BT',divide:'Divide & Conquer',dp:'DP + MRV',hybrid:'Hybrid'};
 
-            // Erase selected cell
-            function eraseSelected() {
-                if (selectedRow === -1 || selectedCol === -1) {
-                    statusEl.textContent = '⚠️ no cell selected';
-                    return;
-                }
-                if (fixed[selectedRow][selectedCol]) {
-                    statusEl.textContent = '⛔ cannot erase fixed cell';
-                    return;
-                }
-                board[selectedRow][selectedCol] = 0;
-                statusEl.textContent = `⌫ erased (${selectedRow+1},${selectedCol+1})`;
-                render();
-            }
+// ── PUZZLES ──────────────────────────────────────────────────
+const PUZZLES=[
+  {name:"Classic #1",board:[[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]],solution:[[5,3,4,6,7,8,9,1,2],[6,7,2,1,9,5,3,4,8],[1,9,8,3,4,2,5,6,7],[8,5,9,7,6,1,4,2,3],[4,2,6,8,5,3,7,9,1],[7,1,3,9,2,4,8,5,6],[9,6,1,5,3,7,2,8,4],[2,8,7,4,1,9,6,3,5],[3,4,5,2,8,6,1,7,9]]},
+  {name:"Moderate",board:[[0,0,0,2,6,0,7,0,1],[6,8,0,0,7,0,0,9,0],[1,9,0,0,0,4,5,0,0],[8,2,0,1,0,0,0,4,0],[0,0,4,6,0,2,9,0,0],[0,5,0,0,0,3,0,2,8],[0,0,9,3,0,0,0,7,4],[0,4,0,0,5,0,0,3,6],[7,0,3,0,1,8,0,0,0]],solution:[[4,3,5,2,6,9,7,8,1],[6,8,2,5,7,1,4,9,3],[1,9,7,8,3,4,5,6,2],[8,2,6,1,9,5,3,4,7],[3,7,4,6,8,2,9,1,5],[9,5,1,7,4,3,6,2,8],[5,1,9,3,2,6,8,7,4],[2,4,8,9,5,7,1,3,6],[7,6,3,4,1,8,2,5,9]]},
+  {name:"Challenger",board:[[0,0,0,0,0,0,0,1,2],[0,0,0,0,3,5,0,0,0],[0,0,0,6,0,0,0,7,0],[7,0,0,0,0,0,3,0,0],[0,0,0,4,0,9,0,0,0],[0,0,5,0,0,0,0,0,8],[0,3,0,0,0,7,0,0,0],[0,0,0,0,8,0,0,0,6],[9,0,0,0,0,0,0,4,0]],solution:[[5,7,8,9,4,6,2,1,3],[2,6,4,7,3,5,8,9,1],[3,1,9,6,2,8,4,7,5],[7,8,2,1,5,4,3,6,9],[1,4,6,8,7,9,5,2,3],[9,3,5,2,6,1,7,8,4],[4,5,1,3,9,7,6,2,8],[6,2,7,5,8,4,1,3,9],[8,9,3,1,2,6,5,4,7]]},
+  {name:"Expert",board:[[8,0,0,0,0,0,0,0,0],[0,0,3,6,0,0,0,0,0],[0,7,0,0,9,0,2,0,0],[0,5,0,0,0,7,0,0,0],[0,0,0,0,4,5,7,0,0],[0,0,0,1,0,0,0,3,0],[0,0,1,0,0,0,0,6,8],[0,0,8,5,0,0,0,1,0],[0,9,0,0,0,0,4,0,0]],solution:[[8,1,2,7,5,3,6,4,9],[9,4,3,6,8,2,1,7,5],[6,7,5,4,9,1,2,8,3],[1,5,4,2,3,7,8,9,6],[3,6,9,8,4,5,7,2,1],[2,8,7,1,6,9,5,3,4],[5,2,1,9,7,4,3,6,8],[4,3,8,5,2,6,9,1,7],[7,9,6,3,1,8,4,5,2]]},
+  {name:"Vintage",board:[[0,2,0,6,0,8,0,0,0],[5,8,0,0,0,9,7,0,0],[0,0,0,0,4,0,0,1,0],[3,7,0,2,0,0,0,6,0],[0,0,0,0,9,0,0,0,0],[0,9,0,0,0,1,0,3,7],[0,3,0,0,7,0,0,0,0],[0,0,5,8,0,0,0,4,9],[0,0,0,4,0,3,0,2,0]],solution:[[1,2,3,6,7,8,9,5,4],[5,8,4,1,3,9,7,6,2],[7,6,9,5,4,2,3,1,8],[3,7,1,2,5,4,8,6,9],[2,4,8,3,9,6,1,7,5],[6,9,5,7,8,1,2,3,4],[4,3,2,9,7,5,6,8,1],[9,1,5,8,2,6,7,4,3],[8,7,6,4,1,3,5,2,9]]}
+];
 
-            // Reset board to current puzzle
-            function resetBoard() {
-                loadPuzzle(currentPuzzleIndex);
-                statusEl.textContent = '↻ puzzle reset';
-            }
+// ── STATE ────────────────────────────────────────────────────
+let board=[],solution=[],fixed=[];
+let selectedRow=-1,selectedCol=-1;
+let currentIdx=0;
+let isSolving=false,stopRequested=false;
+const DELAY=20;
 
-            // Highlight conflicts
-            function highlightConflicts() {
-                // Remove existing conflict class
-                document.querySelectorAll('.cell').forEach(cell => {
-                    cell.classList.remove('conflict');
-                });
+// ── DOM ──────────────────────────────────────────────────────
+const gridEl=document.getElementById('sudokuGrid');
+const statusBarEl=document.getElementById('statusBar');
+const statusTextEl=document.getElementById('statusText');
+const stopBadgeEl=document.getElementById('stopBadge');
+const solveBtnEl=document.getElementById('solveBtn');
+const stopBtnEl=document.getElementById('stopBtn');
+const benchBtnEl=document.getElementById('benchmarkBtn');
+const progressFill=document.getElementById('progressFill');
+const progressLabel=document.getElementById('progressLabel');
+const mSteps=document.getElementById('mSteps');
+const mBacktracks=document.getElementById('mBacktracks');
+const mCache=document.getElementById('mCache');
+const mDepth=document.getElementById('mDepth');
+const mTime=document.getElementById('mTime');
 
-                // Check rows, columns, and boxes for conflicts
-                for (let row = 0; row < 9; row++) {
-                    for (let col = 0; col < 9; col++) {
-                        const val = board[row][col];
-                        if (val === 0) continue;
+// ── METRICS ──────────────────────────────────────────────────
+let M={steps:0,backtracks:0,cache:0,depth:0,t0:0};
+function resetM(){M={steps:0,backtracks:0,cache:0,depth:0,t0:Date.now()};renderM();}
+function renderM(){
+  mSteps.textContent=M.steps.toLocaleString();
+  mBacktracks.textContent=M.backtracks.toLocaleString();
+  mCache.textContent=M.cache.toLocaleString();
+  mDepth.textContent=M.depth.toLocaleString();
+  mTime.textContent=M.t0?(Date.now()-M.t0)+'ms':'—';
+}
+let mTimer=null;
+const startMT=()=>{mTimer=setInterval(renderM,80);};
+const stopMT=()=>{clearInterval(mTimer);mTimer=null;renderM();};
 
-                        // Check row
-                        for (let c = 0; c < 9; c++) {
-                            if (c !== col && board[row][c] === val) {
-                                markConflict(row, col);
-                                markConflict(row, c);
-                            }
-                        }
+// ── COMPLEXITY DISPLAY ───────────────────────────────────────
+function updateComplexityCard(algo){
+  const cx=COMPLEXITY[algo];
+  document.getElementById('cxTime').textContent=cx.time;
+  document.getElementById('cxTimeNote').textContent=cx.timeNote;
+  document.getElementById('cxSpace').textContent=cx.space;
+  document.getElementById('cxSpaceNote').textContent=cx.spaceNote;
+  document.getElementById('cxBacktrack').textContent=cx.worstBacktrack;
+}
 
-                        // Check column
-                        for (let r = 0; r < 9; r++) {
-                            if (r !== row && board[r][col] === val) {
-                                markConflict(row, col);
-                                markConflict(r, col);
-                            }
-                        }
+// ── HELPERS ──────────────────────────────────────────────────
+const findEmpty=b=>{for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(b[r][c]===0)return[r,c];return null;};
+function isValid(b,row,col,n){
+  for(let i=0;i<9;i++)if(b[row][i]===n||b[i][col]===n)return false;
+  const br=~~(row/3)*3,bc=~~(col/3)*3;
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++)if(b[br+r][bc+c]===n)return false;
+  return true;
+}
+const getPoss=(b,r,c)=>{const p=[];for(let n=1;n<=9;n++)if(isValid(b,r,c,n))p.push(n);return p;};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const checkStop=()=>stopRequested;
 
-                        // Check 3x3 box
-                        const boxRow = Math.floor(row / 3) * 3;
-                        const boxCol = Math.floor(col / 3) * 3;
-                        for (let r = 0; r < 3; r++) {
-                            for (let c = 0; c < 3; c++) {
-                                const rr = boxRow + r;
-                                const cc = boxCol + c;
-                                if (rr === row && cc === col) continue;
-                                if (board[rr][cc] === val) {
-                                    markConflict(row, col);
-                                    markConflict(rr, cc);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+// ── CELL DOM HELPERS ─────────────────────────────────────────
+function setCellVal(r,c,v){const cell=gridEl.children[r*9+c];if(!cell)return;cell.textContent=v||'';v&&!fixed[r][c]?cell.classList.add('user-digit'):cell.classList.remove('user-digit');}
+function setCellAnim(r,c,type){const cell=gridEl.children[r*9+c];if(!cell)return;cell.classList.remove('solving','backtrack');if(type)cell.classList.add(type);}
+function setStep(r,c,s){const cell=gridEl.children[r*9+c];if(!cell)return;s!==null?(cell.classList.add('step-number'),cell.setAttribute('data-step',s)):(cell.classList.remove('step-number'),cell.removeAttribute('data-step'));}
+function clearAnims(){Array.from(gridEl.children).forEach(c=>{c.classList.remove('solving','backtrack','step-number');c.removeAttribute('data-step');});}
 
-            function markConflict(row, col) {
-                const index = row * 9 + col;
-                const cell = gridEl.children[index];
-                if (cell) cell.classList.add('conflict');
-            }
+// ── STATUS ───────────────────────────────────────────────────
+function setStatus(text,mode=''){statusTextEl.textContent=text;statusBarEl.className='status-bar'+(mode?' '+mode:'');}
 
-            // Validate board - CHECK FOR CONFLICTS (duplicates)
-            function validateBoard() {
-                // Remove any previous submit highlights
-                document.querySelectorAll('.cell').forEach(cell => {
-                    cell.classList.remove('correct-highlight', 'incorrect-highlight');
-                });
-                
-                highlightConflicts();
-                const conflicts = document.querySelectorAll('.cell.conflict').length > 0;
-                
-                if (conflicts) {
-                    statusEl.textContent = '⚠️ Conflicts detected! Numbers repeat in row/column/box (highlighted red)';
-                } else {
-                    statusEl.textContent = '✓ No conflicts found - your numbers follow Sudoku rules!';
-                }
-            }
+// ── STOP ─────────────────────────────────────────────────────
+function requestStop(){stopRequested=true;stopBtnEl.disabled=true;setStatus('⏹ Stop requested — finishing step…','stopped');}
 
-            // Solve puzzle - uses pre-calculated solution
-            function solvePuzzle() {
-                // Remove any highlights
-                document.querySelectorAll('.cell').forEach(cell => {
-                    cell.classList.remove('correct-highlight', 'incorrect-highlight', 'conflict');
-                });
+// ── UI LOCK ──────────────────────────────────────────────────
+function enterSolving(showStop=true){
+  isSolving=true;stopRequested=false;
+  solveBtnEl.style.display='none';
+  benchBtnEl.style.display='none';
+  if(showStop){stopBtnEl.style.display='';stopBtnEl.disabled=false;}
+  stopBadgeEl.classList.remove('visible');
+  ['resetBtn','newPuzzleBtn','generateBtn'].forEach(id=>document.getElementById(id).disabled=true);
+}
+function exitSolving(stopped){
+  isSolving=false;
+  solveBtnEl.style.display='';
+  benchBtnEl.style.display='';
+  stopBtnEl.style.display='none';
+  ['resetBtn','newPuzzleBtn','generateBtn'].forEach(id=>document.getElementById(id).disabled=false);
+  if(stopped)stopBadgeEl.classList.add('visible');
+}
 
-                // Fill in all empty cells with the pre-calculated solution
-                for (let row = 0; row < 9; row++) {
-                    for (let col = 0; col < 9; col++) {
-                        if (board[row][col] === 0) {
-                            board[row][col] = solution[row][col];
-                        }
-                    }
-                }
-                
-                selectedRow = -1;
-                selectedCol = -1;
-                statusEl.textContent = '✨ Auto-completed! All empty cells filled with solution';
-                render();
-            }
+// ── ALGORITHM CORES ──────────────────────────────────────────
 
-            // Submit answer - Check if the ENTIRE SOLUTION is correct
-            function submitAnswer() {
-                // First check for conflicts
-                highlightConflicts();
-                const conflicts = document.querySelectorAll('.cell.conflict').length > 0;
-                
-                if (conflicts) {
-                    statusEl.textContent = '❌ Cannot submit - fix conflicts first (duplicate numbers)';
-                    return;
-                }
+// 1. Backtracking
+async function btSolve(b,animate,depth){
+  if(checkStop())return false;
+  M.depth=Math.max(M.depth,depth);
+  const empty=findEmpty(b);if(!empty)return true;
+  const[row,col]=empty;
+  for(let n=1;n<=9;n++){
+    if(checkStop())return false;
+    if(isValid(b,row,col,n)){
+      M.steps++;b[row][col]=n;
+      if(animate){setCellVal(row,col,n);setCellAnim(row,col,'solving');setStep(row,col,M.steps);await sleep(DELAY);}
+      if(await btSolve(b,animate,depth+1))return true;
+      M.backtracks++;b[row][col]=0;
+      if(animate){setCellVal(row,col,0);setCellAnim(row,col,'backtrack');setStep(row,col,null);await sleep(DELAY/2);setCellAnim(row,col,null);}
+    }
+  }
+  if(animate)setCellAnim(row,col,null);
+  return false;
+}
 
-                // Check if all cells are filled
-                const filled = countFilledCells();
-                if (filled < 81) {
-                    statusEl.textContent = '⚠️ Cannot submit - puzzle incomplete. Fill all cells first';
-                    return;
-                }
+// 2. Greedy step
+async function greedyStep(b,animate){
+  let progress=false;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(checkStop())return false;
+    if(b[r][c]===0){const p=getPoss(b,r,c);if(p.length===1){M.steps++;b[r][c]=p[0];progress=true;if(animate){setCellVal(r,c,p[0]);setCellAnim(r,c,'solving');setStep(r,c,M.steps);await sleep(DELAY);setCellAnim(r,c,null);}}}
+  }
+  return progress;
+}
 
-                // Compare with solution and highlight
-                let allCorrect = true;
-                let correctCount = 0;
-                let incorrectCount = 0;
+// 3. Box solve
+async function solveBox(b,bR,bC,animate){
+  const sr=bR*3,sc=bC*3;let progress=true;
+  while(progress&&!checkStop()){
+    progress=false;
+    for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+      const row=sr+r,col=sc+c;
+      if(b[row][col]===0){const p=getPoss(b,row,col);if(p.length===1){M.steps++;b[row][col]=p[0];progress=true;if(animate){setCellVal(row,col,p[0]);setCellAnim(row,col,'solving');setStep(row,col,M.steps);await sleep(DELAY);setCellAnim(row,col,null);}}}
+    }
+  }
+}
 
-                // Remove any existing highlights
-                document.querySelectorAll('.cell').forEach(cell => {
-                    cell.classList.remove('correct-highlight', 'incorrect-highlight');
-                });
+// 4. DP + MRV
+let dpCache=new Map();
+async function dpSolve(b,animate,depth){
+  if(checkStop())return false;
+  M.depth=Math.max(M.depth,depth);
+  let bestCell=null,bestP=null,bestLen=10;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(b[r][c]===0){
+      const key=`${r}${c}:${b[r].join('')}|${b.map(row=>row[c]).join('')}`;
+      let p;if(dpCache.has(key)){p=dpCache.get(key);M.cache++;}else{p=getPoss(b,r,c);dpCache.set(key,p);}
+      if(p.length===0)return false;
+      if(p.length<bestLen){bestLen=p.length;bestCell=[r,c];bestP=p;}
+    }
+  }
+  if(!bestCell)return true;
+  const[row,col]=bestCell;
+  for(const n of bestP){
+    if(checkStop())return false;
+    if(!isValid(b,row,col,n))continue;
+    M.steps++;b[row][col]=n;
+    if(animate){setCellVal(row,col,n);setCellAnim(row,col,'solving');setStep(row,col,M.steps);await sleep(DELAY);}
+    if(await dpSolve(b,animate,depth+1))return true;
+    M.backtracks++;b[row][col]=0;
+    if(animate){setCellVal(row,col,0);setCellAnim(row,col,'backtrack');setStep(row,col,null);await sleep(DELAY/2);setCellAnim(row,col,null);}
+  }
+  if(animate)setCellAnim(row,col,null);
+  return false;
+}
 
-                // Check each cell and highlight
-                for (let row = 0; row < 9; row++) {
-                    for (let col = 0; col < 9; col++) {
-                        const index = row * 9 + col;
-                        const cell = gridEl.children[index];
-                        
-                        if (board[row][col] === solution[row][col]) {
-                            cell.classList.add('correct-highlight');
-                            correctCount++;
-                        } else {
-                            cell.classList.add('incorrect-highlight');
-                            incorrectCount++;
-                            allCorrect = false;
-                        }
-                    }
-                }
+// ── ALGORITHM WRAPPERS (with animation) ─────────────────────
+async function solveBacktrack(b,animate){resetM();startMT();setStatus('🔄 Backtracking…','solving');const ok=await btSolve(b,animate,0);stopMT();finish(ok,'Backtracking',b);return ok;}
+async function solveGreedy(b,animate){resetM();startMT();setStatus('⚡ Greedy + Backtracking…','solving');let gF=0,pg=true;while(pg&&!checkStop()){const bf=M.steps;pg=await greedyStep(b,animate);gF+=M.steps-bf;}const ok=checkStop()?false:await btSolve(b,animate,0);stopMT();finish(ok,'Greedy',b);return ok;}
+async function solveDivide(b,animate){resetM();startMT();setStatus('📦 Divide & Conquer…','solving');let bF=0;for(let bR=0;bR<3&&!checkStop();bR++)for(let bC=0;bC<3&&!checkStop();bC++){const bf=M.steps;await solveBox(b,bR,bC,animate);bF+=M.steps-bf;}const ok=checkStop()?false:await btSolve(b,animate,0);stopMT();finish(ok,'D&C',b);return ok;}
+async function solveDP(b,animate){resetM();startMT();dpCache.clear();setStatus('🧠 DP + MRV…','solving');const ok=await dpSolve(b,animate,0);stopMT();finish(ok,'DP+MRV',b);return ok;}
+async function solveHybrid(b,animate){resetM();startMT();dpCache.clear();setStatus('🚀 Hybrid…','solving');let gF=0,pg=true;while(pg&&!checkStop()){const bf=M.steps;pg=await greedyStep(b,animate);gF+=M.steps-bf;}let bF=0;for(let bR=0;bR<3&&!checkStop();bR++)for(let bC=0;bC<3&&!checkStop();bC++){const bf=M.steps;await solveBox(b,bR,bC,animate);bF+=M.steps-bf;}const ok=checkStop()?false:await dpSolve(b,animate,0);stopMT();finish(ok,'Hybrid',b);return ok;}
 
-                if (allCorrect) {
-                    statusEl.textContent = '🏆 PERFECT! Congratulations! You solved it correctly!';
-                    // Add a little celebration effect
-                    gridEl.style.animation = 'pulse 0.5s ease 3';
-                    setTimeout(() => {
-                        gridEl.style.animation = '';
-                    }, 1500);
-                } else {
-                    statusEl.textContent = `📝 ${correctCount} correct, ${incorrectCount} incorrect - keep trying!`;
-                }
-            }
+function finish(ok,name,b){
+  if(stopRequested)setStatus(`⏹ Stopped after ${M.steps.toLocaleString()} steps`,'stopped');
+  else if(ok)setStatus(`✅ ${name} solved — ${M.steps.toLocaleString()} steps · ${M.backtracks.toLocaleString()} backtracks · ${Date.now()-M.t0}ms`,'success');
+  else setStatus('❌ No solution found','error');
+}
 
-            // Event listeners
-            window.addEventListener('keydown', handleKeyPress);
-            document.getElementById('resetBtn').addEventListener('click', resetBoard);
-            document.getElementById('eraseBtn').addEventListener('click', eraseSelected);
-            document.getElementById('validateBtn').addEventListener('click', validateBoard);
-            document.getElementById('solveBtn').addEventListener('click', solvePuzzle);
-            document.getElementById('newPuzzleBtn').addEventListener('click', loadRandomPuzzle);
-            document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+// ── DISPATCH (with animation) ────────────────────────────────
+const SOLVERS_ANIM={backtrack:solveBacktrack,greedy:solveGreedy,divide:solveDivide,dp:solveDP,hybrid:solveHybrid};
 
-            // Initialize with first puzzle
-            loadPuzzle(0);
-        })();
-    </script>
+async function solvePuzzle(){
+  if(isSolving)return;
+  enterSolving();clearAnims();
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('correct-highlight','incorrect-highlight','conflict'));
+  const algo=document.getElementById('algorithmSelect').value;
+  const b=board.map(r=>[...r]);
+  const ok=await SOLVERS_ANIM[algo](b,true);
+  if(ok&&!stopRequested){board=b;clearAnims();render();gridEl.classList.add('solved');setTimeout(()=>gridEl.classList.remove('solved'),2500);}
+  exitSolving(stopRequested);
+}
+
+// ── BENCHMARK ALL (no animation, runs each silently) ─────────
+async function benchmarkAll(){
+  if(isSolving)return;
+  enterSolving(false); // no stop button for benchmark (it's fast)
+  document.getElementById('benchPanel').style.display='none';
+  setStatus('📊 Benchmarking all 5 algorithms (no animation)…','benchmarking');
+
+  const ALGOS=[
+    {key:'backtrack',label:'🔄 Backtracking', run:async b=>{resetM();await btSolve(b,false,0);}},
+    {key:'greedy',   label:'⚡ Greedy + BT',  run:async b=>{resetM();let pg=true;while(pg&&!checkStop()){pg=await greedyStep(b,false);}await btSolve(b,false,0);}},
+    {key:'divide',   label:'📦 Divide & Conquer',run:async b=>{resetM();for(let bR=0;bR<3;bR++)for(let bC=0;bC<3;bC++)await solveBox(b,bR,bC,false);await btSolve(b,false,0);}},
+    {key:'dp',       label:'🧠 DP + MRV',     run:async b=>{resetM();dpCache.clear();await dpSolve(b,false,0);}},
+    {key:'hybrid',   label:'🚀 Hybrid',        run:async b=>{resetM();dpCache.clear();let pg=true;while(pg)pg=await greedyStep(b,false);for(let bR=0;bR<3;bR++)for(let bC=0;bC<3;bC++)await solveBox(b,bR,bC,false);await dpSolve(b,false,0);}}
+  ];
+
+  const results=[];
+  for(const algo of ALGOS){
+    setStatus(`📊 Running ${algo.label}…`,'benchmarking');
+    const b=board.map(r=>[...r]);
+    const t0=performance.now();
+    await algo.run(b);
+    const elapsed=Math.round(performance.now()-t0);
+    results.push({key:algo.key,label:algo.label,time:elapsed,steps:M.steps,backtracks:M.backtracks,cache:M.cache,depth:M.depth});
+    await sleep(30); // tiny yield to keep UI responsive between runs
+  }
+
+  renderBenchResults(results);
+  setStatus(`✅ Benchmark complete — ${results.length} algorithms compared`,'success');
+  exitSolving(false);
+  document.getElementById('benchPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderBenchResults(results){
+  // Determine winner by: lowest time, tiebreak by steps
+  const sorted=[...results].sort((a,b)=>a.time!==b.time?a.time-b.time:a.steps-b.steps);
+  const winner=sorted[0];
+  const maxTime=Math.max(...results.map(r=>r.time||1));
+  const maxSteps=Math.max(...results.map(r=>r.steps||1));
+
+  document.getElementById('bestBadge').textContent=`🏆 Best: ${ALGO_NAMES[winner.key]}`;
+
+  const tbody=document.getElementById('benchBody');
+  tbody.innerHTML='';
+  results.forEach(r=>{
+    const cx=COMPLEXITY[r.key];
+    const isWinner=r.key===winner.key;
+    const timePct=Math.round((r.time/(maxTime||1))*100);
+    const stepPct=Math.round((r.steps/(maxSteps||1))*100);
+    const barColor=cx.color;
+    const tr=document.createElement('tr');
+    if(isWinner)tr.classList.add('winner');
+    tr.innerHTML=`
+      <td><span style="font-weight:600;color:${isWinner?'var(--gold)':'var(--text)'}">${r.label}${isWinner?' 🏆':''}</span></td>
+      <td class="mono" style="color:${isWinner?'var(--gold)':'var(--text2)'}">${r.time}ms
+        <div class="bar-wrap"><div class="bar-fill" style="width:${timePct}%;background:${barColor}"></div></div>
+      </td>
+      <td class="mono">${r.steps.toLocaleString()}
+        <div class="bar-wrap"><div class="bar-fill" style="width:${stepPct}%;background:${barColor};opacity:.6"></div></div>
+      </td>
+      <td class="mono">${r.backtracks.toLocaleString()}</td>
+      <td class="mono" style="color:var(--green)">${r.cache.toLocaleString()}</td>
+      <td class="mono">${r.depth}</td>
+      <td><span class="cx-badge cx-time">${cx.time}</span></td>
+      <td><span class="cx-badge cx-space">${cx.space}</span></td>
+      <td>
+        <span style="font-size:.72rem;color:${isWinner?'var(--gold)':r.time===Math.max(...results.map(x=>x.time))?'var(--red)':'var(--text2)'}">
+          ${isWinner?'⭐ Fastest':''}
+          ${r.time===Math.max(...results.map(x=>x.time))&&!isWinner?'⚠ Slowest':''}
+          ${!isWinner&&r.time!==Math.max(...results.map(x=>x.time))?'–':''}
+        </span>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Winner summary
+  const cx=COMPLEXITY[winner.key];
+  const runnerUp=sorted[1];
+  const speedup=runnerUp.time>0?Math.round(((runnerUp.time-winner.time)/runnerUp.time)*100):0;
+  document.getElementById('winnerSummaryBody').innerHTML=`
+    <strong>${ALGO_NAMES[winner.key]}</strong> solved this puzzle fastest in <strong style="color:var(--gold)">${winner.time}ms</strong>
+    with <strong>${winner.steps.toLocaleString()} steps</strong> and <strong>${winner.backtracks} backtracks</strong>.<br><br>
+    <strong>Time complexity:</strong> <code style="background:rgba(108,142,255,.1);padding:1px 6px;border-radius:4px;font-size:.85em">${cx.time}</code> — ${cx.timeNote}<br>
+    <strong>Space complexity:</strong> <code style="background:rgba(52,211,153,.1);padding:1px 6px;border-radius:4px;font-size:.85em">${cx.space}</code> — ${cx.spaceNote}<br><br>
+    ${speedup>0?`It was <strong style="color:var(--green)">${speedup}% faster</strong> than the runner-up (<strong>${ALGO_NAMES[runnerUp.key]}</strong> at ${runnerUp.time}ms).<br><br>`:''}
+    <em style="color:var(--text3)">${cx.summary}</em>
+  `;
+  document.getElementById('winnerSummary').style.display='block';
+  document.getElementById('benchPanel').style.display='block';
+}
+
+// ── RENDER ───────────────────────────────────────────────────
+function render(){
+  gridEl.innerHTML='';
+  for(let row=0;row<9;row++)for(let col=0;col<9;col++){
+    const cell=document.createElement('div');
+    cell.className='cell';cell.dataset.row=row;cell.dataset.col=col;
+    if(fixed[row][col])cell.classList.add('given');
+    else{cell.classList.add('editable');if(board[row][col])cell.classList.add('user-digit');}
+    if(selectedRow===row&&selectedCol===col)cell.classList.add('selected');
+    cell.textContent=board[row][col]||'';
+    cell.addEventListener('click',()=>handleClick(row,col));
+    gridEl.appendChild(cell);
+  }
+  highlightConflicts();updateProgress();
+}
+
+// ── PUZZLE OPS ───────────────────────────────────────────────
+function loadPuzzle(idx){
+  const p=PUZZLES[idx];
+  board=p.board.map(r=>[...r]);solution=p.solution.map(r=>[...r]);fixed=p.board.map(r=>r.map(v=>v!==0));
+  selectedRow=selectedCol=-1;stopBadgeEl.classList.remove('visible');
+  document.getElementById('benchPanel').style.display='none';
+  setStatus(`🎲 ${p.name} loaded`);render();
+}
+function loadRandom(){currentIdx=~~(Math.random()*PUZZLES.length);loadPuzzle(currentIdx);}
+function resetBoard(){loadPuzzle(currentIdx);setStatus('↻ Puzzle reset');}
+
+async function generatePuzzle(){
+  if(isSolving)return;
+  setStatus('⚙ Generating…');
+  const nb=Array.from({length:9},()=>Array(9).fill(0));
+  for(let b=0;b<9;b+=3)fillBox(nb,b,b);
+  await btSolve(nb,false,0);
+  const sol=nb.map(r=>[...r]);
+  const keep=25+~~(Math.random()*11);let rem=81-keep;
+  while(rem>0){const r=~~(Math.random()*9),c=~~(Math.random()*9);if(nb[r][c]){nb[r][c]=0;rem--;}}
+  board=nb.map(r=>[...r]);solution=sol;fixed=nb.map(r=>r.map(v=>v!==0));
+  selectedRow=selectedCol=-1;setStatus(`⚙ Generated — ${keep} clues`);render();
+}
+function fillBox(b,sr,sc){const n=[1,2,3,4,5,6,7,8,9].sort(()=>Math.random()-.5);let i=0;for(let r=0;r<3;r++)for(let c=0;c<3;c++)b[sr+r][sc+c]=n[i++];}
+
+// ── INPUT ────────────────────────────────────────────────────
+function handleClick(row,col){
+  if(isSolving)return;
+  if(fixed[row][col]){selectedRow=selectedCol=-1;setStatus('⛔ Given cell');}
+  else{selectedRow=row;selectedCol=col;setStatus(`✎ Selected (${row+1}, ${col+1})`);}
+  render();
+}
+window.addEventListener('keydown',e=>{
+  if(isSolving)return;
+  if(e.key==='Escape'){selectedRow=selectedCol=-1;render();return;}
+  if(selectedRow===-1||fixed[selectedRow][selectedCol])return;
+  if(e.key>='1'&&e.key<='9'){e.preventDefault();board[selectedRow][selectedCol]=+e.key;setStatus(`✎ Placed ${e.key}`);render();}
+  else if(e.key==='0'||e.key==='Backspace'||e.key==='Delete'){e.preventDefault();board[selectedRow][selectedCol]=0;setStatus('⌫ Cleared');render();}
+});
+document.getElementById('eraseBtn').addEventListener('click',()=>{
+  if(selectedRow===-1){setStatus('⚠ No cell selected');return;}
+  if(fixed[selectedRow][selectedCol]){setStatus('⛔ Cannot erase');return;}
+  board[selectedRow][selectedCol]=0;setStatus('⌫ Erased');render();
+});
+
+// ── VALIDATE / SUBMIT ────────────────────────────────────────
+function highlightConflicts(){
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('conflict'));
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const v=board[r][c];if(!v)continue;
+    for(let i=0;i<9;i++){if(i!==c&&board[r][i]===v){mark(r,c);mark(r,i);}if(i!==r&&board[i][c]===v){mark(r,c);mark(i,c);}}
+    const br=~~(r/3)*3,bc=~~(c/3)*3;
+    for(let dr=0;dr<3;dr++)for(let dc=0;dc<3;dc++){const rr=br+dr,cc=bc+dc;if((rr!==r||cc!==c)&&board[rr][cc]===v){mark(r,c);mark(rr,cc);}}
+  }
+}
+function mark(r,c){const cell=gridEl.children[r*9+c];if(cell)cell.classList.add('conflict');}
+
+document.getElementById('validateBtn').addEventListener('click',()=>{
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('correct-highlight','incorrect-highlight'));
+  highlightConflicts();
+  const n=document.querySelectorAll('.cell.conflict').length;
+  setStatus(n?`⚠ ${n} conflict${n>1?'s':''} detected`:'✓ No conflicts — valid so far');
+});
+document.getElementById('submitBtn').addEventListener('click',()=>{
+  highlightConflicts();
+  if(document.querySelectorAll('.cell.conflict').length){setStatus('❌ Fix conflicts first','error');return;}
+  let filled=0;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(board[r][c])filled++;
+  if(filled<81){setStatus('⚠ Fill all 81 cells first');return;}
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('correct-highlight','incorrect-highlight'));
+  let ok=0,bad=0;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const cell=gridEl.children[r*9+c];
+    board[r][c]===solution[r][c]?(cell.classList.add('correct-highlight'),ok++):(cell.classList.add('incorrect-highlight'),bad++);
+  }
+  bad===0?setStatus('🏆 Perfect! Puzzle solved correctly!','success'):setStatus(`📝 ${ok} correct, ${bad} incorrect`);
+});
+
+// ── PROGRESS ─────────────────────────────────────────────────
+function updateProgress(){
+  let n=0;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(board[r][c])n++;
+  progressFill.style.width=(n/81*100)+'%';
+  progressLabel.textContent=`${n} / 81`;
+}
+
+// ── WIRING ───────────────────────────────────────────────────
+solveBtnEl.addEventListener('click',solvePuzzle);
+stopBtnEl.addEventListener('click',requestStop);
+benchBtnEl.addEventListener('click',benchmarkAll);
+document.getElementById('resetBtn').addEventListener('click',resetBoard);
+document.getElementById('newPuzzleBtn').addEventListener('click',loadRandom);
+document.getElementById('generateBtn').addEventListener('click',generatePuzzle);
+document.getElementById('algorithmSelect').addEventListener('change',function(){
+  document.getElementById('algoDesc').textContent=ALGO_DESC[this.value];
+  updateComplexityCard(this.value);
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+loadPuzzle(0);
+const initAlgo='backtrack';
+document.getElementById('algoDesc').textContent=ALGO_DESC[initAlgo];
+updateComplexityCard(initAlgo);
+
+})();
+</script>
 </body>
 </html>
