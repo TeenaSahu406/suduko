@@ -3,836 +3,328 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sudoku — DSA Edition</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Sudoku</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#0f1117; --surface:#181c27; --surface2:#1f2436; --surface3:#252c40;
-  --border:#2e3650; --border2:#3d4a6e;
-  --accent:#6c8eff; --accent2:#a78bfa;
-  --gold:#f0b429; --green:#34d399; --red:#f87171; --orange:#fb923c; --pink:#f472b6;
-  --text:#e8eaf6; --text2:#8892b0; --text3:#4a5578;
-  --given-bg:#1a2035; --given-fg:#c8d6ff; --user-fg:#6c8eff;
-  --cell-size:56px;
-}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{
-  background:var(--bg);
-  min-height:100vh;
-  display:flex;flex-direction:column;
-  align-items:center;
-  padding:24px 20px 60px;
-  font-family:'DM Sans',sans-serif;
-  color:var(--text);
-  background-image:
-    linear-gradient(rgba(108,142,255,0.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(108,142,255,0.025) 1px,transparent 1px);
-  background-size:40px 40px;
-}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 12px 50px;font-family:'Special Elite',cursive;color:#e8dcc8;background-image:radial-gradient(circle at 20% 20%,#16213e,#1a1a2e 60%);}
+h1{font-size:2rem;letter-spacing:5px;text-transform:uppercase;margin-bottom:2px;text-align:center;}
+h1 em{color:#e07b39;font-style:normal;}
+.sub{font-family:'Caveat',cursive;font-size:0.95rem;color:#7a6a5a;margin-bottom:16px;text-align:center;letter-spacing:2px;}
 
-/* ── HEADER ── */
-.app-header{
-  width:100%;max-width:1200px;
-  display:flex;align-items:flex-end;justify-content:space-between;
-  padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:28px;
-}
-.title{font-family:'DM Serif Display',serif;font-size:2.5rem;letter-spacing:3px;text-transform:uppercase;}
-.title span{color:var(--accent);font-style:italic;}
-.subtitle{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
-.progress-wrap{display:flex;align-items:center;gap:10px;}
-.progress-bar-bg{width:200px;height:5px;background:var(--surface3);border-radius:99px;overflow:hidden;}
-.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .3s;}
-.progress-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text3);}
+/* DIFF TABS */
+.topbar{display:flex;gap:7px;margin-bottom:14px;justify-content:center;}
+.diff-btn{font-family:'Special Elite',cursive;font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;padding:6px 14px;border:1px solid #3a3a5a;background:transparent;color:#7a6a8a;cursor:pointer;border-radius:3px;transition:all .15s;}
+.diff-btn.on{background:#e07b39;border-color:#e07b39;color:#fff;}
+.diff-btn:hover:not(.on){border-color:#e07b39;color:#e07b39;}
 
-/* ── MAIN LAYOUT ── */
-.main{display:grid;grid-template-columns:280px auto 280px;gap:24px;align-items:start;width:100%;max-width:1200px;}
+/* GRID */
+#grid{display:grid;grid-template-columns:repeat(9,1fr);width:min(352px,96vw);aspect-ratio:1;border:2.5px solid #e8dcc8;border-radius:4px;overflow:hidden;}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'Special Elite',cursive;font-size:clamp(.8rem,3.5vw,1.2rem);cursor:pointer;background:#1e1e38;color:#e8dcc8;border-right:1px solid #2a2a4a;border-bottom:1px solid #2a2a4a;transition:background .1s;user-select:none;}
+.cell:nth-child(9n){border-right:none;}
+.cell[data-r="8"]{border-bottom:none;}
+.cell[data-c="3"],.cell[data-c="6"]{border-left:2px solid #5a5a8a;}
+.cell[data-r="3"],.cell[data-r="6"]{border-top:2px solid #5a5a8a;}
+.cell.given{background:#151528;color:#c8b8f0;}
+.cell.sel{background:#2a3060!important;box-shadow:inset 0 0 0 2px #e07b39;}
+.cell.hl{background:#232345;}
+.cell.placing{background:#3a3010!important;color:#f0c050!important;animation:pop .18s ease;}
+.cell.removing{background:#3a1010!important;color:#e07b39!important;}
+.cell.done{background:#0f2a1a!important;color:#50e090!important;}
+@keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
 
-/* ── CARD ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;}
-.card-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
-.left-col,.right-col{display:flex;flex-direction:column;gap:14px;}
+/* STATUS */
+#status{font-family:'Caveat',cursive;font-size:1rem;color:#7a8aaa;margin:9px 0 7px;text-align:center;min-height:20px;}
+#status.ok{color:#50e090;}#status.err{color:#e05070;}#status.run{color:#f0c050;}
 
-/* ── SUDOKU GRID ── */
-.grid-wrap{position:relative;display:inline-block;}
-.sudoku-grid{
-  display:grid;
-  grid-template-columns:repeat(9,var(--cell-size));
-  grid-template-rows:repeat(9,var(--cell-size));
-  gap:2px;background:var(--border2);padding:2px;
-  border-radius:14px;
-  box-shadow:0 0 0 1px var(--border),0 20px 50px rgba(0,0,0,0.6);
-}
-.cell{
-  width:var(--cell-size);height:var(--cell-size);
-  background:var(--surface);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'IBM Plex Mono',monospace;font-size:1.45rem;font-weight:600;
-  cursor:pointer;transition:background .1s,transform .1s,box-shadow .1s;
-  border-radius:4px;position:relative;user-select:none;color:var(--text2);
-}
-.cell[data-col="2"],.cell[data-col="5"]{border-right:2px solid var(--border2);}
-.cell[data-row="2"],.cell[data-row="5"]{border-bottom:2px solid var(--border2);}
-.cell.given{background:var(--given-bg);color:var(--given-fg);cursor:default;}
-.cell.editable:hover:not(.solving):not(.backtrack){background:var(--surface3);transform:scale(1.05);box-shadow:0 0 0 2px var(--accent),0 4px 12px rgba(108,142,255,.2);z-index:2;}
-.cell.user-digit{color:var(--user-fg);}
-.cell.selected{background:rgba(108,142,255,.18)!important;box-shadow:inset 0 0 0 2px var(--accent)!important;color:#fff!important;z-index:3;}
-.cell.conflict{background:rgba(248,113,113,.15)!important;color:var(--red)!important;box-shadow:inset 0 0 0 2px var(--red)!important;}
-.cell.correct-highlight{background:rgba(52,211,153,.15)!important;box-shadow:inset 0 0 0 2px var(--green)!important;color:var(--green)!important;}
-.cell.incorrect-highlight{background:rgba(248,113,113,.15)!important;box-shadow:inset 0 0 0 2px var(--red)!important;color:var(--red)!important;}
-.cell.solving{background:rgba(240,180,41,.18)!important;box-shadow:inset 0 0 0 2px var(--gold),0 0 14px rgba(240,180,41,.3)!important;color:var(--gold)!important;animation:cellPop .2s ease;z-index:2;}
-.cell.backtrack{background:rgba(251,146,60,.12)!important;box-shadow:inset 0 0 0 2px var(--orange)!important;color:var(--orange)!important;}
-@keyframes cellPop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
-.cell.step-number::after{content:attr(data-step);position:absolute;top:2px;right:3px;font-size:.45rem;font-family:'IBM Plex Mono',monospace;color:var(--gold);opacity:.8;line-height:1;}
-@keyframes solvedGlow{0%,100%{box-shadow:0 0 0 1px var(--border),0 20px 50px rgba(0,0,0,.6)}50%{box-shadow:0 0 0 2px var(--green),0 0 60px rgba(52,211,153,.3),0 20px 50px rgba(0,0,0,.6)}}
-.sudoku-grid.solved{animation:solvedGlow .8s ease 3;}
-.stop-badge{display:none;position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:1.5px;padding:4px 14px;border-radius:99px;white-space:nowrap;text-transform:uppercase;box-shadow:0 2px 12px rgba(248,113,113,.5);z-index:20;}
-.stop-badge.visible{display:block;animation:badgeFade .2s ease;}
-@keyframes badgeFade{from{opacity:0;transform:translateX(-50%) translateY(-4px)}}
+/* NUMPAD AREA */
+.numpad-area{width:min(352px,96vw);display:flex;flex-direction:column;gap:7px;}
+.nums{display:grid;grid-template-columns:repeat(9,1fr);gap:3px;}
+.num-btn{aspect-ratio:1;font-family:'Special Elite',cursive;font-size:clamp(.8rem,3vw,1.1rem);background:#1e1e38;border:1px solid #3a3a5a;color:#c8b8f0;cursor:pointer;border-radius:4px;transition:all .12s;display:flex;align-items:center;justify-content:center;}
+.num-btn:hover,.num-btn:active{background:#e07b39;border-color:#e07b39;color:#fff;transform:scale(.93);}
 
-/* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .14s;white-space:nowrap;}
-.btn:hover:not(:disabled){background:var(--surface3);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3);}
-.btn:active:not(:disabled){transform:translateY(0);}
-.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
-.btn-solve{background:linear-gradient(135deg,#3b5bdb,var(--accent));border:none;color:#fff;padding:12px 20px;font-size:.92rem;font-weight:600;box-shadow:0 4px 20px rgba(108,142,255,.3);}
-.btn-solve:hover:not(:disabled){background:linear-gradient(135deg,#4a6cee,#7da4ff);box-shadow:0 6px 28px rgba(108,142,255,.45);border:none;}
-.btn-benchmark{background:linear-gradient(135deg,#7c3aed,var(--accent2));border:none;color:#fff;padding:12px 20px;font-size:.92rem;font-weight:600;box-shadow:0 4px 20px rgba(167,139,250,.3);}
-.btn-benchmark:hover:not(:disabled){background:linear-gradient(135deg,#8b5cf6,#c084fc);box-shadow:0 6px 28px rgba(167,139,250,.5);border:none;}
-.btn-stop{background:linear-gradient(135deg,#c0392b,var(--red));border:none;color:#fff;padding:12px 20px;font-size:.92rem;font-weight:700;box-shadow:0 4px 20px rgba(248,113,113,.4);animation:stopPulse 1s ease-in-out infinite;}
-@keyframes stopPulse{0%,100%{box-shadow:0 4px 20px rgba(248,113,113,.4)}50%{box-shadow:0 4px 32px rgba(248,113,113,.7)}}
-.btn-stop:hover:not(:disabled){background:linear-gradient(135deg,#e74c3c,#ff8a80);box-shadow:0 6px 32px rgba(248,113,113,.6);border:none;}
-.btn-validate{border-color:rgba(108,142,255,.4);}
-.btn-validate:hover:not(:disabled){background:rgba(108,142,255,.1);border-color:var(--accent);}
-.btn-submit{background:rgba(240,180,41,.1);border-color:rgba(240,180,41,.4);color:var(--gold);}
-.btn-submit:hover:not(:disabled){background:rgba(240,180,41,.18);border-color:var(--gold);}
-.btn-new{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3);color:var(--green);}
-.btn-new:hover:not(:disabled){background:rgba(52,211,153,.15);border-color:var(--green);}
-.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.btn-grid .btn{width:100%;}
-.btn-grid .btn-full{grid-column:1/-1;}
-.solve-actions{display:flex;flex-direction:column;gap:8px;}
+/* ACTIONS */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.act{padding:9px 4px;font-family:'Special Elite',cursive;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;background:transparent;border:1px solid #3a3a5a;color:#7a6a8a;cursor:pointer;border-radius:4px;transition:all .12s;}
+.act:hover,.act:active{background:#2a2a4a;color:#e8dcc8;}
+.act.solve{border-color:#e07b39;color:#e07b39;}
+.act.solve:hover,.act.solve:active{background:#e07b39;color:#fff;}
+.act.stop{border-color:#e05070;color:#e05070;}
+.act.stop:hover,.act.stop:active{background:#e05070;color:#fff;}
+.act.instant{border-color:#50e090;color:#50e090;}
+.act.instant:hover,.act.instant:active{background:#50e090;color:#111;}
 
-/* ── STATUS BAR ── */
-.status-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--text2);min-height:40px;transition:border-color .2s,color .2s;}
-.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .2s;}
-.status-bar.solving{border-color:var(--gold);color:var(--gold);}
-.status-bar.solving .status-dot{background:var(--gold);box-shadow:0 0 6px var(--gold);animation:dotBlink .6s ease infinite;}
-.status-bar.stopped{border-color:var(--red);color:var(--red);}
-.status-bar.stopped .status-dot{background:var(--red);}
-.status-bar.success{border-color:var(--green);color:var(--green);}
-.status-bar.success .status-dot{background:var(--green);box-shadow:0 0 6px var(--green);}
-.status-bar.error{border-color:var(--red);color:var(--red);}
-.status-bar.error .status-dot{background:var(--red);}
-.status-bar.benchmarking{border-color:var(--accent2);color:var(--accent2);}
-.status-bar.benchmarking .status-dot{background:var(--accent2);box-shadow:0 0 6px var(--accent2);animation:dotBlink .4s ease infinite;}
-@keyframes dotBlink{0%,100%{opacity:1}50%{opacity:.3}}
+/* SPEED + STATS */
+.bottom{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;}
+.speed-row{display:flex;align-items:center;gap:6px;}
+.speed-row label{font-family:'Caveat',cursive;font-size:.8rem;color:#5a5a7a;}
+input[type=range]{accent-color:#e07b39;width:75px;}
+#spLbl{font-family:'Caveat',cursive;font-size:.8rem;color:#e07b39;width:36px;}
+.stats{font-family:'Caveat',cursive;font-size:.82rem;color:#4a4a6a;display:flex;gap:8px;}
+.stats b{color:#8a7aaa;}
 
-/* ── METRICS GRID ── */
-.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.metric{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
-.metric-val{font-family:'IBM Plex Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent);display:block;line-height:1;}
-.metric-val.orange{color:var(--orange);}
-.metric-val.green{color:var(--green);}
-.metric-val.gold{color:var(--gold);}
-.metric-val.pink{color:var(--pink);}
-.metric-lbl{font-size:.67rem;color:var(--text3);margin-top:4px;letter-spacing:.4px;}
+/* ── BACKTRACKING EXPLAINER ── */
+.explainer{width:min(352px,96vw);margin-top:18px;border:1px solid #3a3a5a;border-radius:6px;overflow:hidden;}
+.exp-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1e1e38;cursor:pointer;user-select:none;}
+.exp-title{font-family:'Special Elite',cursive;font-size:.8rem;letter-spacing:2px;text-transform:uppercase;color:#c8b8f0;}
+.exp-arrow{color:#e07b39;font-size:.85rem;transition:transform .25s;}
+.exp-arrow.open{transform:rotate(180deg);}
+.exp-body{display:none;padding:14px;background:#16162a;display:flex;flex-direction:column;gap:10px;}
 
-/* ── COMPLEXITY CARD ── */
-.complexity-row{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
-.complexity-row:last-child{border-bottom:none;}
-.cx-label{font-size:.78rem;color:var(--text2);}
-.cx-badge{font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:6px;letter-spacing:.5px;}
-.cx-time{background:rgba(108,142,255,.15);color:var(--accent);}
-.cx-space{background:rgba(52,211,153,.12);color:var(--green);}
-.cx-note{font-size:.7rem;color:var(--text3);margin-top:2px;font-style:italic;}
+.step-card{border-left:3px solid #e07b39;padding:8px 10px;background:#1e1e38;border-radius:0 6px 6px 0;}
+.step-card.bt{border-left-color:#e05070;}
+.step-card.done-c{border-left-color:#50e090;}
+.step-num{font-family:'Special Elite',cursive;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#e07b39;margin-bottom:3px;}
+.step-card.bt .step-num{color:#e05070;}
+.step-card.done-c .step-num{color:#50e090;}
+.step-title{font-family:'Special Elite',cursive;font-size:.88rem;color:#e8dcc8;margin-bottom:4px;}
+.step-desc{font-family:'Caveat',cursive;font-size:.95rem;color:#8a8ab0;line-height:1.5;}
+.step-desc code{background:#2a2a4a;padding:1px 5px;border-radius:3px;font-size:.82rem;color:#c8b8f0;}
 
-/* ── ALGO SELECT ── */
-.algo-select-wrap{position:relative;}
-.algo-select-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--accent);pointer-events:none;font-size:.8rem;}
-select{width:100%;padding:10px 32px 10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.85rem;cursor:pointer;appearance:none;outline:none;transition:border-color .15s,box-shadow .15s;}
-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,142,255,.15);}
-.algo-desc{margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent);font-size:.78rem;color:var(--text2);line-height:1.55;min-height:48px;}
+.pseudo{background:#111128;border:1px solid #2a2a4a;border-radius:6px;padding:12px;margin-top:2px;}
+.pseudo-title{font-family:'Special Elite',cursive;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#5a5a7a;margin-bottom:8px;}
+.pseudo pre{font-family:'Caveat',cursive;font-size:.95rem;color:#8a9ab0;line-height:1.7;white-space:pre-wrap;}
+.pseudo pre .kw{color:#e07b39;}
+.pseudo pre .cm{color:#4a5a5a;}
+.pseudo pre .fn{color:#c8b8f0;}
+.pseudo pre .bt{color:#e05070;}
 
-/* ── BENCHMARK RESULTS PANEL ── */
-#benchPanel{display:none;}
-.bench-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.bench-headline{font-family:'DM Serif Display',serif;font-size:1.15rem;color:var(--text);}
-.best-badge{background:linear-gradient(135deg,var(--gold),#fbbf24);color:#000;font-family:'IBM Plex Mono',monospace;font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:1px;text-transform:uppercase;}
-
-.bench-table{width:100%;border-collapse:separate;border-spacing:0 6px;}
-.bench-table th{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:0 10px 6px;text-align:left;border-bottom:1px solid var(--border);}
-.bench-table td{padding:10px;font-size:.82rem;background:var(--surface2);border:1px solid transparent;}
-.bench-table td:first-child{border-radius:8px 0 0 8px;border-left-color:var(--border);}
-.bench-table td:last-child{border-radius:0 8px 8px 0;border-right-color:var(--border);}
-.bench-table tr td{border-top-color:var(--border);border-bottom-color:var(--border);}
-.bench-table .mono{font-family:'IBM Plex Mono',monospace;font-size:.78rem;}
-.bench-table .winner td{background:rgba(240,180,41,.08);border-top-color:rgba(240,180,41,.3)!important;border-bottom-color:rgba(240,180,41,.3)!important;}
-.bench-table .winner td:first-child{border-left-color:var(--gold)!important;}
-.bench-table .winner td:last-child{border-right-color:rgba(240,180,41,.3)!important;}
-
-.bar-wrap{width:100%;height:6px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-top:4px;}
-.bar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.16,1,.3,1);}
-
-.winner-summary{margin-top:16px;padding:14px 16px;background:rgba(240,180,41,.07);border:1px solid rgba(240,180,41,.25);border-radius:12px;border-left:3px solid var(--gold);}
-.winner-summary-title{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
-.winner-summary-body{font-size:.82rem;color:var(--text2);line-height:1.6;}
-.winner-summary-body strong{color:var(--text);}
-
-/* ── SHORTCUTS ── */
-.shortcuts{display:flex;flex-wrap:wrap;gap:6px 12px;}
-.shortcut-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--text3);}
-kbd{background:var(--surface3);border:1px solid var(--border2);padding:2px 6px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);}
-
-/* ── LEGEND ── */
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--text3);}
-.legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
-
-/* ── BENCHMARK BOTTOM SECTION ── */
-.bench-section{width:100%;max-width:1200px;margin-top:24px;}
-
-/* ── RESPONSIVE ── */
-@media(max-width:900px){
-  .main{grid-template-columns:1fr;justify-items:center;}
-  .left-col,.right-col{width:100%;max-width:520px;}
-  :root{--cell-size:42px;}
-  .app-header{flex-direction:column;align-items:flex-start;gap:10px;}
-  .progress-bar-bg{width:160px;}
-}
+.legend-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:2px;}
+.leg{display:flex;align-items:center;gap:5px;font-family:'Caveat',cursive;font-size:.9rem;color:#7a7a9a;}
+.dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
 </style>
 </head>
 <body>
 
-<!-- ── HEADER ────────────────────────────────────────────── -->
-<header class="app-header">
-  <div>
-    <h1 class="title">Su<span>doku</span></h1>
-    <p class="subtitle">DSA Algorithm Visualiser &amp; Complexity Analyser</p>
-  </div>
-  <div class="progress-wrap">
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-    <span class="progress-label" id="progressLabel">0 / 81</span>
-  </div>
-</header>
+<h1>Su<em>doku</em></h1>
+<p class="sub">backtracking visualizer</p>
 
-<!-- ── MAIN GRID ──────────────────────────────────────────── -->
-<div class="main">
+<div class="topbar">
+  <button class="diff-btn on" onclick="loadDiff(0)">Easy</button>
+  <button class="diff-btn" onclick="loadDiff(1)">Medium</button>
+  <button class="diff-btn" onclick="loadDiff(2)">Hard</button>
+</div>
 
-  <!-- LEFT COL -->
-  <div class="left-col">
+<div id="grid"></div>
+<div id="status">tap a cell to begin</div>
 
-    <!-- Algorithm picker -->
-    <div class="card">
-      <div class="card-title">Algorithm</div>
-      <div class="algo-select-wrap">
-        <select id="algorithmSelect">
-          <option value="backtrack">🔄  Backtracking</option>
-          <option value="greedy">⚡  Greedy + Backtracking</option>
-          <option value="divide">📦  Divide &amp; Conquer</option>
-          <option value="dp">🧠  Dynamic Programming (MRV)</option>
-          <option value="hybrid">🚀  Hybrid — All Methods</option>
-        </select>
-      </div>
-      <div class="algo-desc" id="algoDesc"></div>
-    </div>
+<div class="numpad-area">
+  <div class="nums" id="nums"></div>
 
-    <!-- Complexity for selected algorithm -->
-    <div class="card" id="complexityCard">
-      <div class="card-title">Complexity — Selected Algorithm</div>
-      <div id="complexityBody">
-        <div class="complexity-row">
-          <div><div class="cx-label">⏱ Time Complexity</div><div class="cx-note" id="cxTimeNote"></div></div>
-          <span class="cx-badge cx-time" id="cxTime">—</span>
-        </div>
-        <div class="complexity-row">
-          <div><div class="cx-label">📦 Space Complexity</div><div class="cx-note" id="cxSpaceNote"></div></div>
-          <span class="cx-badge cx-space" id="cxSpace">—</span>
-        </div>
-        <div class="complexity-row">
-          <div><div class="cx-label">🔄 Worst-case Backtracks</div></div>
-          <span class="cx-badge cx-time" id="cxBacktrack">—</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Solve actions -->
-    <div class="solve-actions">
-      <button class="btn btn-solve" id="solveBtn">✨ Solve with Algorithm</button>
-      <button class="btn btn-benchmark" id="benchmarkBtn">📊 Benchmark All Algorithms</button>
-      <button class="btn btn-stop" id="stopBtn" style="display:none">⏹ Stop Solving</button>
-    </div>
-
-    <!-- Status -->
-    <div class="status-bar" id="statusBar">
-      <span class="status-dot"></span>
-      <span id="statusText">Ready — select a puzzle and an algorithm</span>
-    </div>
-
-    <!-- Live metrics -->
-    <div class="card">
-      <div class="card-title">Live Metrics</div>
-      <div class="metrics-grid">
-        <div class="metric"><span class="metric-val" id="mSteps">—</span><div class="metric-lbl">Steps taken</div></div>
-        <div class="metric"><span class="metric-val orange" id="mBacktracks">—</span><div class="metric-lbl">Backtracks</div></div>
-        <div class="metric"><span class="metric-val green" id="mCache">—</span><div class="metric-lbl">Cache hits</div></div>
-        <div class="metric"><span class="metric-val gold" id="mDepth">—</span><div class="metric-lbl">Max depth</div></div>
-        <div class="metric" style="grid-column:1/-1"><span class="metric-val pink" id="mTime">—</span><div class="metric-lbl">Time elapsed</div></div>
-      </div>
-    </div>
-
+  <div class="actions">
+    <button class="act" onclick="clearCell()">⌫  Erase</button>
+    <button class="act" onclick="resetBoard()">↩  Reset</button>
+    <button class="act solve" id="solveBtn" onclick="startSolve()">▶  Watch Solve</button>
+    <button class="act stop" id="stopBtn" style="display:none" onclick="stopReq=true">■  Stop</button>
+    <button class="act instant" style="grid-column:1/-1" onclick="instantSolve()">⚡  Show Solution</button>
   </div>
 
-  <!-- CENTRE — GRID -->
-  <div>
-    <div class="grid-wrap">
-      <div class="stop-badge" id="stopBadge">Stopped</div>
-      <div class="sudoku-grid" id="sudokuGrid"></div>
+  <div class="bottom">
+    <div class="speed-row">
+      <label>Speed</label>
+      <input type="range" id="spd" min="0" max="3" value="1"
+        oninput="document.getElementById('spLbl').textContent=['Slow','Med','Fast','⚡'][+this.value]">
+      <span id="spLbl">Med</span>
     </div>
-  </div>
-
-  <!-- RIGHT COL -->
-  <div class="right-col">
-
-    <!-- Puzzle controls -->
-    <div class="card">
-      <div class="card-title">Puzzle</div>
-      <div class="btn-grid">
-        <button class="btn btn-new btn-full" id="newPuzzleBtn">🎲 New Puzzle</button>
-        <button class="btn" id="resetBtn">↻ Reset</button>
-        <button class="btn" id="generateBtn">⚙ Generate</button>
-        <button class="btn" id="eraseBtn">⌫ Erase</button>
-        <button class="btn btn-validate" id="validateBtn">✓ Validate</button>
-        <button class="btn btn-submit btn-full" id="submitBtn">📤 Submit Answer</button>
-      </div>
+    <div class="stats">
+      <span>Steps <b id="ss">0</b></span>
+      <span>BT <b id="sb">0</b></span>
+      <span><b id="st">—</b></span>
     </div>
-
-    <!-- About algorithms -->
-    <div class="card">
-      <div class="card-title">Algorithm Notes</div>
-      <div style="font-size:.78rem;color:var(--text2);line-height:1.65;display:flex;flex-direction:column;gap:8px;">
-        <div><strong style="color:var(--text)">Backtracking</strong> — recursive trial-and-error, guaranteed solution if one exists.</div>
-        <div><strong style="color:var(--text)">Greedy</strong> — fills naked singles first; greatly reduces backtracking on easy/medium puzzles.</div>
-        <div><strong style="color:var(--text)">Divide &amp; Conquer</strong> — decomposes into 3×3 sub-problems before cross-box resolution.</div>
-        <div><strong style="color:var(--text)">DP + MRV</strong> — memoises constraint data; MRV heuristic picks the most constrained cell first.</div>
-        <div><strong style="color:var(--text)">Hybrid</strong> — chains Greedy → D&amp;C → DP+MRV. Most efficient overall.</div>
-      </div>
-    </div>
-
-    <!-- Legend -->
-    <div class="card">
-      <div class="card-title">Legend</div>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(240,180,41,.6);box-shadow:0 0 4px rgba(240,180,41,.5)"></div>Placing digit</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(251,146,60,.5)"></div>Backtracking</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(52,211,153,.4)"></div>Correct</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(248,113,113,.4)"></div>Conflict</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(108,142,255,.35)"></div>Selected</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#1a2035;outline:1px solid #c8d6ff"></div>Given clue</div>
-      </div>
-    </div>
-
-    <!-- Keyboard shortcuts -->
-    <div class="card">
-      <div class="card-title">Keyboard</div>
-      <div class="shortcuts">
-        <div class="shortcut-item"><kbd>1</kbd>–<kbd>9</kbd> enter digit</div>
-        <div class="shortcut-item"><kbd>0</kbd>/<kbd>⌫</kbd> clear</div>
-        <div class="shortcut-item"><kbd>Click</kbd> select</div>
-        <div class="shortcut-item"><kbd>Esc</kbd> deselect</div>
-      </div>
-    </div>
-
   </div>
 </div>
 
-<!-- ── BENCHMARK RESULTS (full width, below grid) ──────────── -->
-<div class="bench-section">
-  <div id="benchPanel" class="card" style="margin-top:8px;">
-    <div class="bench-title-row">
-      <span class="bench-headline">📊 Algorithm Benchmark Results</span>
-      <span class="best-badge" id="bestBadge">🏆 Best: —</span>
+<!-- ── BACKTRACKING EXPLAINER ── -->
+<div class="explainer">
+  <div class="exp-header" onclick="toggleExp()">
+    <span class="exp-title">📖 How Backtracking Works</span>
+    <span class="exp-arrow" id="expArrow">▼</span>
+  </div>
+  <div class="exp-body" id="expBody" style="display:none">
+
+    <div class="step-card">
+      <div class="step-num">Step 1 — Try</div>
+      <div class="step-title">Find an empty cell</div>
+      <div class="step-desc">Scan row by row. Pick the first empty cell. Try placing digit <code>1</code> first.</div>
     </div>
 
-    <table class="bench-table" id="benchTable">
-      <thead>
-        <tr>
-          <th>Algorithm</th>
-          <th>Time (ms)</th>
-          <th>Steps</th>
-          <th>Backtracks</th>
-          <th>Cache Hits</th>
-          <th>Max Depth</th>
-          <th>Time Complexity</th>
-          <th>Space Complexity</th>
-          <th>Performance</th>
-        </tr>
-      </thead>
-      <tbody id="benchBody"></tbody>
-    </table>
-
-    <div class="winner-summary" id="winnerSummary" style="display:none">
-      <div class="winner-summary-title">🏆 Analysis — Best Algorithm</div>
-      <div class="winner-summary-body" id="winnerSummaryBody"></div>
+    <div class="step-card">
+      <div class="step-num">Step 2 — Check</div>
+      <div class="step-title">Is this digit valid?</div>
+      <div class="step-desc">Check if the digit already exists in the same <b>row</b>, <b>column</b>, or <b>3×3 box</b>. If not → place it and move to the next empty cell.</div>
     </div>
+
+    <div class="step-card bt">
+      <div class="step-num">Step 3 — Backtrack</div>
+      <div class="step-title">Dead end? Go back</div>
+      <div class="step-desc">If no digit 1–9 works → <b>erase</b> this cell, go back to the previous cell, and try the next digit. This is <code>backtracking</code>.</div>
+    </div>
+
+    <div class="step-card done-c">
+      <div class="step-num">Step 4 — Done</div>
+      <div class="step-title">No empty cells left</div>
+      <div class="step-desc">When <code>findEmpty()</code> returns null, the board is fully solved. Every digit passed validation → solution found!</div>
+    </div>
+
+    <div class="pseudo">
+      <div class="pseudo-title">Pseudocode</div>
+      <pre><span class="fn">solve</span>(board):
+  cell = <span class="fn">findEmpty</span>(board)
+  <span class="kw">if</span> cell == null:
+    <span class="kw">return</span> true  <span class="cm">// solved!</span>
+
+  <span class="kw">for</span> n = 1 to 9:
+    <span class="kw">if</span> <span class="fn">isValid</span>(board, cell, n):
+      board[cell] = n
+
+      <span class="kw">if</span> <span class="fn">solve</span>(board):
+        <span class="kw">return</span> true  <span class="cm">// recurse</span>
+
+      board[cell] = 0  <span class="bt">// backtrack</span>
+
+  <span class="kw">return</span> false  <span class="cm">// trigger BT</span></pre>
+    </div>
+
+    <div class="legend-row">
+      <div class="leg"><div class="dot" style="background:#3a3010;border:1px solid #f0c050"></div>Placing digit</div>
+      <div class="leg"><div class="dot" style="background:#3a1010;border:1px solid #e07b39"></div>Backtracking</div>
+      <div class="leg"><div class="dot" style="background:#0f2a1a;border:1px solid #50e090"></div>Solved</div>
+    </div>
+
   </div>
 </div>
 
 <script>
-(function(){
-
-// ── COMPLEXITY DATABASE ──────────────────────────────────────
-const COMPLEXITY = {
-  backtrack:{
-    time:'O(9^n)', timeNote:'n = number of empty cells. Tries up to 9 values per cell.',
-    space:'O(n)', spaceNote:'Recursion stack depth equals number of empty cells.',
-    worstBacktrack:'O(9^81)' , color:'#6c8eff',
-    summary:'Pure backtracking explores a 9-ary tree of depth n. In the worst case every branch is explored, giving exponential time. Space is linear (stack depth). Best for: understanding, simple correctness.'
-  },
-  greedy:{
-    time:'O(9^n)', timeNote:'Greedy pre-pass reduces n significantly; remaining cells still use backtracking.',
-    space:'O(n)', spaceNote:'Recursion stack + O(81) board. Proportional to empty cells.',
-    worstBacktrack:'O(9^k)', color:'#fb923c',
-    summary:'Greedy fills "naked singles" in O(81) passes before invoking backtracking, reducing k (remaining empties) dramatically. On easy/medium puzzles k approaches 0. Time complexity class is the same as backtracking but the constant is far smaller.'
-  },
-  divide:{
-    time:'O(9^n)', timeNote:'Box-phase solves easy singles; cross-box remainder still needs backtracking.',
-    space:'O(n)', spaceNote:'Stack per box solve + shared board. Overall O(n).',
-    worstBacktrack:'O(9^m)', color:'#34d399',
-    summary:'Divide & Conquer reduces the problem into 9 sub-problems (3×3 boxes). Each box is solved greedily first, shrinking the global backtracking space. Space remains linear. Best for: structured thinking and presentations.'
-  },
-  dp:{
-    time:'O(9^n)', timeNote:'Same asymptotic class but MRV heuristic prunes branches aggressively.',
-    space:'O(n + C)', spaceNote:'C = cache entries. Cache grows with board states visited; bounded in practice.',
-    worstBacktrack:'O(9^k)', color:'#a78bfa',
-    summary:'DP memoises row/column constraint lookups avoiding redundant set-building. MRV (Minimum Remaining Values) always picks the most constrained cell, cutting the branching factor. Practically far faster than plain backtracking on hard puzzles despite the same Big-O class.'
-  },
-  hybrid:{
-    time:'O(9^n)', timeNote:'Greedy + box pre-processing minimises n before DP+MRV finishes the job.',
-    space:'O(n + C)', spaceNote:'Combines stack depth, cache, and board copy overhead.',
-    worstBacktrack:'O(9^r)', color:'#f0b429',
-    summary:'Hybrid chains every optimisation: naked-single elimination, box decomposition, then DP+MRV backtracking on the tiny remainder. In practice this resolves even "Expert" puzzles with single-digit backtrack counts. The best overall strategy for any difficulty level.'
-  }
-};
-
-const ALGO_DESC = {
-  backtrack:'Fills cells left-to-right, top-to-bottom. Tries 1–9 and backtracks on conflict. Pure recursive trial-and-error.',
-  greedy:'Pre-fills naked singles (cells with only 1 valid candidate), dramatically reducing the search space before backtracking.',
-  divide:'Treats each 3×3 box as an independent sub-problem, solving boxes in isolation before handling cross-box dependencies.',
-  dp:'Memoises constraint lookups per cell state. MRV heuristic always picks the most constrained empty cell first.',
-  hybrid:'Chains all methods: Greedy fills → Box solving → DP+MRV backtracking. Best overall efficiency.'
-};
-
-const ALGO_NAMES = {backtrack:'Backtracking',greedy:'Greedy + BT',divide:'Divide & Conquer',dp:'DP + MRV',hybrid:'Hybrid'};
-
-// ── PUZZLES ──────────────────────────────────────────────────
 const PUZZLES=[
-  {name:"Classic #1",board:[[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]],solution:[[5,3,4,6,7,8,9,1,2],[6,7,2,1,9,5,3,4,8],[1,9,8,3,4,2,5,6,7],[8,5,9,7,6,1,4,2,3],[4,2,6,8,5,3,7,9,1],[7,1,3,9,2,4,8,5,6],[9,6,1,5,3,7,2,8,4],[2,8,7,4,1,9,6,3,5],[3,4,5,2,8,6,1,7,9]]},
-  {name:"Moderate",board:[[0,0,0,2,6,0,7,0,1],[6,8,0,0,7,0,0,9,0],[1,9,0,0,0,4,5,0,0],[8,2,0,1,0,0,0,4,0],[0,0,4,6,0,2,9,0,0],[0,5,0,0,0,3,0,2,8],[0,0,9,3,0,0,0,7,4],[0,4,0,0,5,0,0,3,6],[7,0,3,0,1,8,0,0,0]],solution:[[4,3,5,2,6,9,7,8,1],[6,8,2,5,7,1,4,9,3],[1,9,7,8,3,4,5,6,2],[8,2,6,1,9,5,3,4,7],[3,7,4,6,8,2,9,1,5],[9,5,1,7,4,3,6,2,8],[5,1,9,3,2,6,8,7,4],[2,4,8,9,5,7,1,3,6],[7,6,3,4,1,8,2,5,9]]},
-  {name:"Challenger",board:[[0,0,0,0,0,0,0,1,2],[0,0,0,0,3,5,0,0,0],[0,0,0,6,0,0,0,7,0],[7,0,0,0,0,0,3,0,0],[0,0,0,4,0,9,0,0,0],[0,0,5,0,0,0,0,0,8],[0,3,0,0,0,7,0,0,0],[0,0,0,0,8,0,0,0,6],[9,0,0,0,0,0,0,4,0]],solution:[[5,7,8,9,4,6,2,1,3],[2,6,4,7,3,5,8,9,1],[3,1,9,6,2,8,4,7,5],[7,8,2,1,5,4,3,6,9],[1,4,6,8,7,9,5,2,3],[9,3,5,2,6,1,7,8,4],[4,5,1,3,9,7,6,2,8],[6,2,7,5,8,4,1,3,9],[8,9,3,1,2,6,5,4,7]]},
-  {name:"Expert",board:[[8,0,0,0,0,0,0,0,0],[0,0,3,6,0,0,0,0,0],[0,7,0,0,9,0,2,0,0],[0,5,0,0,0,7,0,0,0],[0,0,0,0,4,5,7,0,0],[0,0,0,1,0,0,0,3,0],[0,0,1,0,0,0,0,6,8],[0,0,8,5,0,0,0,1,0],[0,9,0,0,0,0,4,0,0]],solution:[[8,1,2,7,5,3,6,4,9],[9,4,3,6,8,2,1,7,5],[6,7,5,4,9,1,2,8,3],[1,5,4,2,3,7,8,9,6],[3,6,9,8,4,5,7,2,1],[2,8,7,1,6,9,5,3,4],[5,2,1,9,7,4,3,6,8],[4,3,8,5,2,6,9,1,7],[7,9,6,3,1,8,4,5,2]]},
-  {name:"Vintage",board:[[0,2,0,6,0,8,0,0,0],[5,8,0,0,0,9,7,0,0],[0,0,0,0,4,0,0,1,0],[3,7,0,2,0,0,0,6,0],[0,0,0,0,9,0,0,0,0],[0,9,0,0,0,1,0,3,7],[0,3,0,0,7,0,0,0,0],[0,0,5,8,0,0,0,4,9],[0,0,0,4,0,3,0,2,0]],solution:[[1,2,3,6,7,8,9,5,4],[5,8,4,1,3,9,7,6,2],[7,6,9,5,4,2,3,1,8],[3,7,1,2,5,4,8,6,9],[2,4,8,3,9,6,1,7,5],[6,9,5,7,8,1,2,3,4],[4,3,2,9,7,5,6,8,1],[9,1,5,8,2,6,7,4,3],[8,7,6,4,1,3,5,2,9]]}
+  [[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]],
+  [[0,0,0,2,6,0,7,0,1],[6,8,0,0,7,0,0,9,0],[1,9,0,0,0,4,5,0,0],[8,2,0,1,0,0,0,4,0],[0,0,4,6,0,2,9,0,0],[0,5,0,0,0,3,0,2,8],[0,0,9,3,0,0,0,7,4],[0,4,0,0,5,0,0,3,6],[7,0,3,0,1,8,0,0,0]],
+  [[8,0,0,0,0,0,0,0,0],[0,0,3,6,0,0,0,0,0],[0,7,0,0,9,0,2,0,0],[0,5,0,0,0,7,0,0,0],[0,0,0,0,4,5,7,0,0],[0,0,0,1,0,0,0,3,0],[0,0,1,0,0,0,0,6,8],[0,0,8,5,0,0,0,1,0],[0,9,0,0,0,0,4,0,0]]
 ];
+const DELAYS=[160,55,12,0];
+let board=[],given=[],selR=-1,selC=-1,solving=false,stopReq=false,diffIdx=0,steps=0,bts=0,t0=0;
 
-// ── STATE ────────────────────────────────────────────────────
-let board=[],solution=[],fixed=[];
-let selectedRow=-1,selectedCol=-1;
-let currentIdx=0;
-let isSolving=false,stopRequested=false;
-const DELAY=20;
+const numsEl=document.getElementById('nums');
+for(let i=1;i<=9;i++){const b=document.createElement('button');b.className='num-btn';b.textContent=i;b.onclick=()=>enter(i);numsEl.appendChild(b);}
 
-// ── DOM ──────────────────────────────────────────────────────
-const gridEl=document.getElementById('sudokuGrid');
-const statusBarEl=document.getElementById('statusBar');
-const statusTextEl=document.getElementById('statusText');
-const stopBadgeEl=document.getElementById('stopBadge');
-const solveBtnEl=document.getElementById('solveBtn');
-const stopBtnEl=document.getElementById('stopBtn');
-const benchBtnEl=document.getElementById('benchmarkBtn');
-const progressFill=document.getElementById('progressFill');
-const progressLabel=document.getElementById('progressLabel');
-const mSteps=document.getElementById('mSteps');
-const mBacktracks=document.getElementById('mBacktracks');
-const mCache=document.getElementById('mCache');
-const mDepth=document.getElementById('mDepth');
-const mTime=document.getElementById('mTime');
-
-// ── METRICS ──────────────────────────────────────────────────
-let M={steps:0,backtracks:0,cache:0,depth:0,t0:0};
-function resetM(){M={steps:0,backtracks:0,cache:0,depth:0,t0:Date.now()};renderM();}
-function renderM(){
-  mSteps.textContent=M.steps.toLocaleString();
-  mBacktracks.textContent=M.backtracks.toLocaleString();
-  mCache.textContent=M.cache.toLocaleString();
-  mDepth.textContent=M.depth.toLocaleString();
-  mTime.textContent=M.t0?(Date.now()-M.t0)+'ms':'—';
+function loadDiff(i){
+  if(solving)return;
+  diffIdx=i;document.querySelectorAll('.diff-btn').forEach((b,j)=>b.classList.toggle('on',j===i));
+  board=PUZZLES[i].map(r=>[...r]);given=PUZZLES[i].map(r=>r.map(v=>v!==0));
+  selR=selC=-1;steps=0;bts=0;t0=0;renderStats();render();setS('tap a cell to begin');
 }
-let mTimer=null;
-const startMT=()=>{mTimer=setInterval(renderM,80);};
-const stopMT=()=>{clearInterval(mTimer);mTimer=null;renderM();};
+function resetBoard(){if(solving)return;loadDiff(diffIdx);}
 
-// ── COMPLEXITY DISPLAY ───────────────────────────────────────
-function updateComplexityCard(algo){
-  const cx=COMPLEXITY[algo];
-  document.getElementById('cxTime').textContent=cx.time;
-  document.getElementById('cxTimeNote').textContent=cx.timeNote;
-  document.getElementById('cxSpace').textContent=cx.space;
-  document.getElementById('cxSpaceNote').textContent=cx.spaceNote;
-  document.getElementById('cxBacktrack').textContent=cx.worstBacktrack;
+function cell(r,c){return document.getElementById('grid').children[r*9+c];}
+
+function render(){
+  const g=document.getElementById('grid');g.innerHTML='';
+  const sv=selR>=0&&board[selR][selC];
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const el=document.createElement('div');
+    let cls='cell'+(given[r][c]?' given':'');
+    if(r===selR&&c===selC)cls+=' sel';
+    else if(sv&&board[r][c]===board[selR][selC]&&board[r][c])cls+=' hl';
+    el.className=cls;el.dataset.r=r;el.dataset.c=c;
+    el.textContent=board[r][c]||'';el.onclick=()=>tap(r,c);
+    g.appendChild(el);
+  }
 }
+function tap(r,c){if(solving)return;selR=r;selC=c;render();setS(given[r][c]?'given — fixed':'cell ('+( r+1)+','+( c+1)+')');}
+function enter(n){if(solving||selR<0||given[selR][selC])return;board[selR][selC]=n;render();}
+function clearCell(){if(solving||selR<0||given[selR][selC])return;board[selR][selC]=0;render();}
+document.addEventListener('keydown',e=>{
+  if(solving)return;
+  if(e.key>='1'&&e.key<='9')enter(+e.key);
+  if(e.key==='Backspace'||e.key==='0')clearCell();
+  if(e.key==='Escape'){selR=selC=-1;render();}
+});
 
-// ── HELPERS ──────────────────────────────────────────────────
-const findEmpty=b=>{for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(b[r][c]===0)return[r,c];return null;};
-function isValid(b,row,col,n){
-  for(let i=0;i<9;i++)if(b[row][i]===n||b[i][col]===n)return false;
-  const br=~~(row/3)*3,bc=~~(col/3)*3;
-  for(let r=0;r<3;r++)for(let c=0;c<3;c++)if(b[br+r][bc+c]===n)return false;
+function isValid(b,r,c,n){
+  for(let i=0;i<9;i++)if(b[r][i]===n||b[i][c]===n)return false;
+  const br=~~(r/3)*3,bc=~~(c/3)*3;
+  for(let dr=0;dr<3;dr++)for(let dc=0;dc<3;dc++)if(b[br+dr][bc+dc]===n)return false;
   return true;
 }
-const getPoss=(b,r,c)=>{const p=[];for(let n=1;n<=9;n++)if(isValid(b,r,c,n))p.push(n);return p;};
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const checkStop=()=>stopRequested;
+function findEmpty(b){for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!b[r][c])return[r,c];return null;}
+const sleep=ms=>new Promise(res=>setTimeout(res,ms));
 
-// ── CELL DOM HELPERS ─────────────────────────────────────────
-function setCellVal(r,c,v){const cell=gridEl.children[r*9+c];if(!cell)return;cell.textContent=v||'';v&&!fixed[r][c]?cell.classList.add('user-digit'):cell.classList.remove('user-digit');}
-function setCellAnim(r,c,type){const cell=gridEl.children[r*9+c];if(!cell)return;cell.classList.remove('solving','backtrack');if(type)cell.classList.add(type);}
-function setStep(r,c,s){const cell=gridEl.children[r*9+c];if(!cell)return;s!==null?(cell.classList.add('step-number'),cell.setAttribute('data-step',s)):(cell.classList.remove('step-number'),cell.removeAttribute('data-step'));}
-function clearAnims(){Array.from(gridEl.children).forEach(c=>{c.classList.remove('solving','backtrack','step-number');c.removeAttribute('data-step');});}
-
-// ── STATUS ───────────────────────────────────────────────────
-function setStatus(text,mode=''){statusTextEl.textContent=text;statusBarEl.className='status-bar'+(mode?' '+mode:'');}
-
-// ── STOP ─────────────────────────────────────────────────────
-function requestStop(){stopRequested=true;stopBtnEl.disabled=true;setStatus('⏹ Stop requested — finishing step…','stopped');}
-
-// ── UI LOCK ──────────────────────────────────────────────────
-function enterSolving(showStop=true){
-  isSolving=true;stopRequested=false;
-  solveBtnEl.style.display='none';
-  benchBtnEl.style.display='none';
-  if(showStop){stopBtnEl.style.display='';stopBtnEl.disabled=false;}
-  stopBadgeEl.classList.remove('visible');
-  ['resetBtn','newPuzzleBtn','generateBtn'].forEach(id=>document.getElementById(id).disabled=true);
-}
-function exitSolving(stopped){
-  isSolving=false;
-  solveBtnEl.style.display='';
-  benchBtnEl.style.display='';
-  stopBtnEl.style.display='none';
-  ['resetBtn','newPuzzleBtn','generateBtn'].forEach(id=>document.getElementById(id).disabled=false);
-  if(stopped)stopBadgeEl.classList.add('visible');
-}
-
-// ── ALGORITHM CORES ──────────────────────────────────────────
-
-// 1. Backtracking
-async function btSolve(b,animate,depth){
-  if(checkStop())return false;
-  M.depth=Math.max(M.depth,depth);
-  const empty=findEmpty(b);if(!empty)return true;
-  const[row,col]=empty;
+// silent solve (for instant button)
+function solveSync(b){
+  const e=findEmpty(b);if(!e)return true;
+  const[r,c]=e;
   for(let n=1;n<=9;n++){
-    if(checkStop())return false;
-    if(isValid(b,row,col,n)){
-      M.steps++;b[row][col]=n;
-      if(animate){setCellVal(row,col,n);setCellAnim(row,col,'solving');setStep(row,col,M.steps);await sleep(DELAY);}
-      if(await btSolve(b,animate,depth+1))return true;
-      M.backtracks++;b[row][col]=0;
-      if(animate){setCellVal(row,col,0);setCellAnim(row,col,'backtrack');setStep(row,col,null);await sleep(DELAY/2);setCellAnim(row,col,null);}
-    }
+    if(isValid(b,r,c,n)){b[r][c]=n;if(solveSync(b))return true;b[r][c]=0;}
   }
-  if(animate)setCellAnim(row,col,null);
   return false;
 }
 
-// 2. Greedy step
-async function greedyStep(b,animate){
-  let progress=false;
-  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
-    if(checkStop())return false;
-    if(b[r][c]===0){const p=getPoss(b,r,c);if(p.length===1){M.steps++;b[r][c]=p[0];progress=true;if(animate){setCellVal(r,c,p[0]);setCellAnim(r,c,'solving');setStep(r,c,M.steps);await sleep(DELAY);setCellAnim(r,c,null);}}}
-  }
-  return progress;
-}
-
-// 3. Box solve
-async function solveBox(b,bR,bC,animate){
-  const sr=bR*3,sc=bC*3;let progress=true;
-  while(progress&&!checkStop()){
-    progress=false;
-    for(let r=0;r<3;r++)for(let c=0;c<3;c++){
-      const row=sr+r,col=sc+c;
-      if(b[row][col]===0){const p=getPoss(b,row,col);if(p.length===1){M.steps++;b[row][col]=p[0];progress=true;if(animate){setCellVal(row,col,p[0]);setCellAnim(row,col,'solving');setStep(row,col,M.steps);await sleep(DELAY);setCellAnim(row,col,null);}}}
-    }
-  }
-}
-
-// 4. DP + MRV
-let dpCache=new Map();
-async function dpSolve(b,animate,depth){
-  if(checkStop())return false;
-  M.depth=Math.max(M.depth,depth);
-  let bestCell=null,bestP=null,bestLen=10;
-  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
-    if(b[r][c]===0){
-      const key=`${r}${c}:${b[r].join('')}|${b.map(row=>row[c]).join('')}`;
-      let p;if(dpCache.has(key)){p=dpCache.get(key);M.cache++;}else{p=getPoss(b,r,c);dpCache.set(key,p);}
-      if(p.length===0)return false;
-      if(p.length<bestLen){bestLen=p.length;bestCell=[r,c];bestP=p;}
-    }
-  }
-  if(!bestCell)return true;
-  const[row,col]=bestCell;
-  for(const n of bestP){
-    if(checkStop())return false;
-    if(!isValid(b,row,col,n))continue;
-    M.steps++;b[row][col]=n;
-    if(animate){setCellVal(row,col,n);setCellAnim(row,col,'solving');setStep(row,col,M.steps);await sleep(DELAY);}
-    if(await dpSolve(b,animate,depth+1))return true;
-    M.backtracks++;b[row][col]=0;
-    if(animate){setCellVal(row,col,0);setCellAnim(row,col,'backtrack');setStep(row,col,null);await sleep(DELAY/2);setCellAnim(row,col,null);}
-  }
-  if(animate)setCellAnim(row,col,null);
-  return false;
-}
-
-// ── ALGORITHM WRAPPERS (with animation) ─────────────────────
-async function solveBacktrack(b,animate){resetM();startMT();setStatus('🔄 Backtracking…','solving');const ok=await btSolve(b,animate,0);stopMT();finish(ok,'Backtracking',b);return ok;}
-async function solveGreedy(b,animate){resetM();startMT();setStatus('⚡ Greedy + Backtracking…','solving');let gF=0,pg=true;while(pg&&!checkStop()){const bf=M.steps;pg=await greedyStep(b,animate);gF+=M.steps-bf;}const ok=checkStop()?false:await btSolve(b,animate,0);stopMT();finish(ok,'Greedy',b);return ok;}
-async function solveDivide(b,animate){resetM();startMT();setStatus('📦 Divide & Conquer…','solving');let bF=0;for(let bR=0;bR<3&&!checkStop();bR++)for(let bC=0;bC<3&&!checkStop();bC++){const bf=M.steps;await solveBox(b,bR,bC,animate);bF+=M.steps-bf;}const ok=checkStop()?false:await btSolve(b,animate,0);stopMT();finish(ok,'D&C',b);return ok;}
-async function solveDP(b,animate){resetM();startMT();dpCache.clear();setStatus('🧠 DP + MRV…','solving');const ok=await dpSolve(b,animate,0);stopMT();finish(ok,'DP+MRV',b);return ok;}
-async function solveHybrid(b,animate){resetM();startMT();dpCache.clear();setStatus('🚀 Hybrid…','solving');let gF=0,pg=true;while(pg&&!checkStop()){const bf=M.steps;pg=await greedyStep(b,animate);gF+=M.steps-bf;}let bF=0;for(let bR=0;bR<3&&!checkStop();bR++)for(let bC=0;bC<3&&!checkStop();bC++){const bf=M.steps;await solveBox(b,bR,bC,animate);bF+=M.steps-bf;}const ok=checkStop()?false:await dpSolve(b,animate,0);stopMT();finish(ok,'Hybrid',b);return ok;}
-
-function finish(ok,name,b){
-  if(stopRequested)setStatus(`⏹ Stopped after ${M.steps.toLocaleString()} steps`,'stopped');
-  else if(ok)setStatus(`✅ ${name} solved — ${M.steps.toLocaleString()} steps · ${M.backtracks.toLocaleString()} backtracks · ${Date.now()-M.t0}ms`,'success');
-  else setStatus('❌ No solution found','error');
-}
-
-// ── DISPATCH (with animation) ────────────────────────────────
-const SOLVERS_ANIM={backtrack:solveBacktrack,greedy:solveGreedy,divide:solveDivide,dp:solveDP,hybrid:solveHybrid};
-
-async function solvePuzzle(){
-  if(isSolving)return;
-  enterSolving();clearAnims();
-  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('correct-highlight','incorrect-highlight','conflict'));
-  const algo=document.getElementById('algorithmSelect').value;
+function instantSolve(){
+  if(solving)return;
   const b=board.map(r=>[...r]);
-  const ok=await SOLVERS_ANIM[algo](b,true);
-  if(ok&&!stopRequested){board=b;clearAnims();render();gridEl.classList.add('solved');setTimeout(()=>gridEl.classList.remove('solved'),2500);}
-  exitSolving(stopRequested);
+  if(solveSync(b)){
+    board=b;render();
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++)
+      setTimeout(()=>cell(r,c).classList.add('done'),(r*9+c)*12);
+    setS('solution revealed!','ok');
+  } else setS('no solution exists!','err');
 }
 
-// ── BENCHMARK ALL (no animation, runs each silently) ─────────
-async function benchmarkAll(){
-  if(isSolving)return;
-  enterSolving(false); // no stop button for benchmark (it's fast)
-  document.getElementById('benchPanel').style.display='none';
-  setStatus('📊 Benchmarking all 5 algorithms (no animation)…','benchmarking');
-
-  const ALGOS=[
-    {key:'backtrack',label:'🔄 Backtracking', run:async b=>{resetM();await btSolve(b,false,0);}},
-    {key:'greedy',   label:'⚡ Greedy + BT',  run:async b=>{resetM();let pg=true;while(pg&&!checkStop()){pg=await greedyStep(b,false);}await btSolve(b,false,0);}},
-    {key:'divide',   label:'📦 Divide & Conquer',run:async b=>{resetM();for(let bR=0;bR<3;bR++)for(let bC=0;bC<3;bC++)await solveBox(b,bR,bC,false);await btSolve(b,false,0);}},
-    {key:'dp',       label:'🧠 DP + MRV',     run:async b=>{resetM();dpCache.clear();await dpSolve(b,false,0);}},
-    {key:'hybrid',   label:'🚀 Hybrid',        run:async b=>{resetM();dpCache.clear();let pg=true;while(pg)pg=await greedyStep(b,false);for(let bR=0;bR<3;bR++)for(let bC=0;bC<3;bC++)await solveBox(b,bR,bC,false);await dpSolve(b,false,0);}}
-  ];
-
-  const results=[];
-  for(const algo of ALGOS){
-    setStatus(`📊 Running ${algo.label}…`,'benchmarking');
-    const b=board.map(r=>[...r]);
-    const t0=performance.now();
-    await algo.run(b);
-    const elapsed=Math.round(performance.now()-t0);
-    results.push({key:algo.key,label:algo.label,time:elapsed,steps:M.steps,backtracks:M.backtracks,cache:M.cache,depth:M.depth});
-    await sleep(30); // tiny yield to keep UI responsive between runs
+// animated solve
+async function solve(b){
+  if(stopReq)return false;
+  const e=findEmpty(b);if(!e)return true;
+  const[r,c]=e;
+  const d=DELAYS[+document.getElementById('spd').value];
+  for(let n=1;n<=9;n++){
+    if(stopReq)return false;
+    if(isValid(b,r,c,n)){
+      b[r][c]=n;steps++;
+      const el=cell(r,c);el.textContent=n;el.className='cell placing';
+      renderStats();
+      if(d)await sleep(d);else if(steps%300===0)await sleep(0);
+      if(await solve(b))return true;
+      bts++;b[r][c]=0;el.textContent='';el.className='cell removing';
+      renderStats();
+      if(d)await sleep(d/2);
+      el.className='cell';
+    }
   }
-
-  renderBenchResults(results);
-  setStatus(`✅ Benchmark complete — ${results.length} algorithms compared`,'success');
-  exitSolving(false);
-  document.getElementById('benchPanel').scrollIntoView({behavior:'smooth',block:'start'});
+  return false;
+}
+async function startSolve(){
+  if(solving)return;solving=true;stopReq=false;
+  document.getElementById('solveBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='';
+  selR=selC=-1;steps=0;bts=0;t0=Date.now();setS('solving…','run');
+  const b=board.map(r=>[...r]);
+  const ok=await solve(b);
+  if(ok&&!stopReq){
+    board=b;render();
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++)setTimeout(()=>cell(r,c).classList.add('done'),(r*9+c)*15);
+    setS('solved! '+steps+' steps · '+bts+' BT · '+(Date.now()-t0)+'ms','ok');
+  }else setS(stopReq?'stopped.':'no solution!','err');
+  solving=false;
+  document.getElementById('solveBtn').style.display='';
+  document.getElementById('stopBtn').style.display='none';
+  renderStats();
 }
 
-function renderBenchResults(results){
-  // Determine winner by: lowest time, tiebreak by steps
-  const sorted=[...results].sort((a,b)=>a.time!==b.time?a.time-b.time:a.steps-b.steps);
-  const winner=sorted[0];
-  const maxTime=Math.max(...results.map(r=>r.time||1));
-  const maxSteps=Math.max(...results.map(r=>r.steps||1));
+function renderStats(){
+  document.getElementById('ss').textContent=steps.toLocaleString();
+  document.getElementById('sb').textContent=bts.toLocaleString();
+  document.getElementById('st').textContent=t0?(Date.now()-t0)+'ms':'—';
+}
+function setS(m,t=''){const el=document.getElementById('status');el.textContent=m;el.className=t;}
 
-  document.getElementById('bestBadge').textContent=`🏆 Best: ${ALGO_NAMES[winner.key]}`;
-
-  const tbody=document.getElementById('benchBody');
-  tbody.innerHTML='';
-  results.forEach(r=>{
-    const cx=COMPLEXITY[r.key];
-    const isWinner=r.key===winner.key;
-    const timePct=Math.round((r.time/(maxTime||1))*100);
-    const stepPct=Math.round((r.steps/(maxSteps||1))*100);
-    const barColor=cx.color;
-    const tr=document.createElement('tr');
-    if(isWinner)tr.classList.add('winner');
-    tr.innerHTML=`
-      <td><span style="font-weight:600;color:${isWinner?'var(--gold)':'var(--text)'}">${r.label}${isWinner?' 🏆':''}</span></td>
-      <td class="mono" style="color:${isWinner?'var(--gold)':'var(--text2)'}">${r.time}ms
-        <div class="bar-wrap"><div class="bar-fill" style="width:${timePct}%;background:${barColor}"></div></div>
-      </td>
-      <td class="mono">${r.steps.toLocaleString()}
-        <div class="bar-wrap"><div class="bar-fill" style="width:${stepPct}%;background:${barColor};opacity:.6"></div></div>
-      </td>
-      <td class="mono">${r.backtracks.toLocaleString()}</td>
-      <td class="mono" style="color:var(--green)">${r.cache.toLocaleString()}</td>
-      <td class="mono">${r.depth}</td>
-      <td><span class="cx-badge cx-time">${cx.time}</span></td>
-      <td><span class="cx-badge cx-space">${cx.space}</span></td>
-      <td>
-        <span style="font-size:.72rem;color:${isWinner?'var(--gold)':r.time===Math.max(...results.map(x=>x.time))?'var(--red)':'var(--text2)'}">
-          ${isWinner?'⭐ Fastest':''}
-          ${r.time===Math.max(...results.map(x=>x.time))&&!isWinner?'⚠ Slowest':''}
-          ${!isWinner&&r.time!==Math.max(...results.map(x=>x.time))?'–':''}
-        </span>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // Winner summary
-  const cx=COMPLEXITY[winner.key];
-  const runnerUp=sorted[1];
-  const speedup=runnerUp.time>0?Math.round(((runnerUp.time-winner.time)/runnerUp.time)*100):0;
-  document.getElementById('winnerSummaryBody').innerHTML=`
-    <strong>${ALGO_NAMES[winner.key]}</strong> solved this puzzle fastest in <strong style="color:var(--gold)">${winner.time}ms</strong>
-    with <strong>${winner.steps.toLocaleString()} steps</strong> and <strong>${winner.backtracks} backtracks</strong>.<br><br>
-    <strong>Time complexity:</strong> <code style="background:rgba(108,142,255,.1);padding:1px 6px;border-radius:4px;font-size:.85em">${cx.time}</code> — ${cx.timeNote}<br>
-    <strong>Space complexity:</strong> <code style="background:rgba(52,211,153,.1);padding:1px 6px;border-radius:4px;font-size:.85em">${cx.space}</code> — ${cx.spaceNote}<br><br>
-    ${speedup>0?`It was <strong style="color:var(--green)">${speedup}% faster</strong> than the runner-up (<strong>${ALGO_NAMES[runnerUp.key]}</strong> at ${runnerUp.time}ms).<br><br>`:''}
-    <em style="color:var(--text3)">${cx.summary}</em>
-  `;
-  document.getElementById('winnerSummary').style.display='block';
-  document.getElementById('benchPanel').style.display='block';
+function toggleExp(){
+  const b=document.getElementById('expBody');
+  const a=document.getElementById('expArrow');
+  const open=b.style.display==='none';
+  b.style.display=open?'flex':'none';
+  a.classList.toggle('open',open);
 }
 
-// ── RENDER ───────────────────────────────────────────────────
-function render(){
-  gridEl.innerHTML='';
-  for(let row=0;row<9;row++)for(let col=0;col<9;col++){
-    const cell=document.createElement('div');
-    cell.className='cell';cell.dataset.row=row;cell.dataset.col=col;
-    if(fixed[row][col])cell.classList.add('given');
-    else{cell.classList.add('editable');if(board[row][col])cell.classList.add('user-digit');}
-    if(selectedRow===row&&selectedCol===col)cell.classList.add('selected');
-    cell.textContent=board[row][col]||'';
-    cell.addEventListener('click',()=>handleClick(row,col));
-    gridEl.appendChild(cell);
-  }
-  highlightConflicts();updateProgress();
-}
-
-// ── PUZZLE OPS ───────────────────────────────────────────────
-function loadPuzzle(idx){
-  const p=PUZZLES[idx];
-  board=p.board.map(r=>[...r]);solution=p.solution.map(r=>[...r]);fixed=p.board.map(r=>r.map(v=>v!==0));
-  selectedRow=selectedCol=-1;stopBadgeEl.classList.remove('visible');
-  document.getElementById('benchPanel').style.display='none';
-  setStatus(`🎲 ${p.name} loaded`);render();
-}
-function loadRandom(){currentIdx=~~(Math.random()*PUZZLES.length);loadPuzzle(currentIdx);}
-function resetBoard(){loadPuzzle(currentIdx);setStatus('↻ Puzzle reset');}
-
-async function generatePuzzle(){
-  if(isSolving)return;
-  setStatus('⚙ Generating…');
-  const nb=Array.from({length:9},()=>Array(9).fill(0));
-  for(let b=0;b<9;b+=3)fillBox(nb,b,b);
-  await btSolve(nb,false,0);
-  const sol=nb.map(r=>[...r]);
-  const keep=25+~~(Math.random()*11);let rem=81-keep;
-  while(rem>0){const r=~~(Math.random()*9),c=~~(Math.random()*9);if(nb[r][c]){nb[r][c]=0;rem--;}}
-  board=nb.map(r=>[...r]);solution=sol;fixed=nb.map(r=>r.map(v=>v!==0));
-  selectedRow=selectedCol=-1;setStatus(`⚙ Generated — ${keep} clues`);render();
-}
-function fillBox(b,sr,sc){const n=[1,2,3,4,5,6,7,8,9].sort(()=>Math.random()-.5);let i=0;for(let r=0;r<3;r++)for(let c=0;c<3;c++)b[sr+r][sc+c]=n[i++];}
-
-// ── INPUT ────────────────────────────────────────────────────
-function handleClick(row,col){
-  if(isSolving)return;
-  if(fixed[row][col]){selectedRow=selectedCol=-1;setStatus('⛔ Given cell');}
-  else{selectedRow=row;selectedCol=col;setStatus(`✎ Selected (${row+1}, ${col+1})`);}
-  render();
-}
-window.addEventListener('keydown',e=>{
-  if(isSolving)return;
-  if(e.key==='Escape'){selectedRow=selectedCol=-1;render();return;}
-  if(selectedRow===-1||fixed[selectedRow][selectedCol])return;
-  if(e.key>='1'&&e.key<='9'){e.preventDefault();board[selectedRow][selectedCol]=+e.key;setStatus(`✎ Placed ${e.key}`);render();}
-  else if(e.key==='0'||e.key==='Backspace'||e.key==='Delete'){e.preventDefault();board[selectedRow][selectedCol]=0;setStatus('⌫ Cleared');render();}
-});
-document.getElementById('eraseBtn').addEventListener('click',()=>{
-  if(selectedRow===-1){setStatus('⚠ No cell selected');return;}
-  if(fixed[selectedRow][selectedCol]){setStatus('⛔ Cannot erase');return;}
-  board[selectedRow][selectedCol]=0;setStatus('⌫ Erased');render();
-});
-
-// ── VALIDATE / SUBMIT ────────────────────────────────────────
-function highlightConflicts(){
-  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('conflict'));
-  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
-    const v=board[r][c];if(!v)continue;
-    for(let i=0;i<9;i++){if(i!==c&&board[r][i]===v){mark(r,c);mark(r,i);}if(i!==r&&board[i][c]===v){mark(r,c);mark(i,c);}}
-    const br=~~(r/3)*3,bc=~~(c/3)*3;
-    for(let dr=0;dr<3;dr++)for(let dc=0;dc<3;dc++){const rr=br+dr,cc=bc+dc;if((rr!==r||cc!==c)&&board[rr][cc]===v){mark(r,c);mark(rr,cc);}}
-  }
-}
-function mark(r,c){const cell=gridEl.children[r*9+c];if(cell)cell.classList.add('conflict');}
-
-document.getElementById('validateBtn').addEventListener('click',()=>{
-  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('correct-highlight','incorrect-highlight'));
-  highlightConflicts();
-  const n=document.querySelectorAll('.cell.conflict').length;
-  setStatus(n?`⚠ ${n} conflict${n>1?'s':''} detected`:'✓ No conflicts — valid so far');
-});
-document.getElementById('submitBtn').addEventListener('click',()=>{
-  highlightConflicts();
-  if(document.querySelectorAll('.cell.conflict').length){setStatus('❌ Fix conflicts first','error');return;}
-  let filled=0;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(board[r][c])filled++;
-  if(filled<81){setStatus('⚠ Fill all 81 cells first');return;}
-  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('correct-highlight','incorrect-highlight'));
-  let ok=0,bad=0;
-  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
-    const cell=gridEl.children[r*9+c];
-    board[r][c]===solution[r][c]?(cell.classList.add('correct-highlight'),ok++):(cell.classList.add('incorrect-highlight'),bad++);
-  }
-  bad===0?setStatus('🏆 Perfect! Puzzle solved correctly!','success'):setStatus(`📝 ${ok} correct, ${bad} incorrect`);
-});
-
-// ── PROGRESS ─────────────────────────────────────────────────
-function updateProgress(){
-  let n=0;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(board[r][c])n++;
-  progressFill.style.width=(n/81*100)+'%';
-  progressLabel.textContent=`${n} / 81`;
-}
-
-// ── WIRING ───────────────────────────────────────────────────
-solveBtnEl.addEventListener('click',solvePuzzle);
-stopBtnEl.addEventListener('click',requestStop);
-benchBtnEl.addEventListener('click',benchmarkAll);
-document.getElementById('resetBtn').addEventListener('click',resetBoard);
-document.getElementById('newPuzzleBtn').addEventListener('click',loadRandom);
-document.getElementById('generateBtn').addEventListener('click',generatePuzzle);
-document.getElementById('algorithmSelect').addEventListener('change',function(){
-  document.getElementById('algoDesc').textContent=ALGO_DESC[this.value];
-  updateComplexityCard(this.value);
-});
-
-// ── INIT ─────────────────────────────────────────────────────
-loadPuzzle(0);
-const initAlgo='backtrack';
-document.getElementById('algoDesc').textContent=ALGO_DESC[initAlgo];
-updateComplexityCard(initAlgo);
-
-})();
+loadDiff(0);
 </script>
 </body>
 </html>
